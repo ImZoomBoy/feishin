@@ -6,6 +6,7 @@ import {
     ListConfigTable,
 } from '/@/renderer/features/shared/components/list-config-menu';
 import {
+    FullScreenPlayerImageSource,
     PlayerItem,
     useFullScreenPlayerStore,
     useFullScreenPlayerStoreActions,
@@ -24,6 +25,7 @@ export const FullScreenPlayerSettingsForm = () => {
         coverArtSize,
         dynamicBackground,
         dynamicImageBlur,
+        dynamicImageSource,
         dynamicIsImage,
         opacity,
         playerItemAlignment,
@@ -57,6 +59,24 @@ export const FullScreenPlayerSettingsForm = () => {
             id: 'dynamicIsImage',
             isHidden: !dynamicBackground,
             label: t('page.fullscreenPlayer.config.dynamicIsImage'),
+        },
+        {
+            component: (
+                <SegmentedControl
+                    data={[
+                        { label: t('entity.album', { count: 1 }), value: 'album' },
+                        { label: t('entity.artist', { count: 1 }), value: 'artist' },
+                    ]}
+                    onChange={(value) =>
+                        setStore({ dynamicImageSource: value as FullScreenPlayerImageSource })
+                    }
+                    value={dynamicImageSource ?? 'album'}
+                    w="100%"
+                />
+            ),
+            id: 'dynamicImageSource',
+            isHidden: !(dynamicBackground && dynamicIsImage),
+            label: t('page.fullscreenPlayer.config.dynamicImageSource'),
         },
         {
             component: (

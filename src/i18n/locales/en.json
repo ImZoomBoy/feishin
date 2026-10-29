@@ -589,6 +589,7 @@
                 "coverArtSize": "Cover art size",
                 "dynamicBackground": "Dynamic background",
                 "dynamicImageBlur": "Image blur size",
+                "dynamicImageSource": "Background image source",
                 "dynamicIsImage": "Enable background image",
                 "followCurrentLyric": "Follow current lyric",
                 "followCurrentLyric_description": "Automatically scroll to keep the active lyric line in view",

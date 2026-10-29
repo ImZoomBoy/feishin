@@ -14,6 +14,7 @@ import { useLocation } from 'react-router';
 import styles from './full-screen-player.module.css';
 
 import { useItemImageUrl } from '/@/renderer/components/item-image/item-image';
+import { ArtistBackdrop } from '/@/renderer/features/player/components/artist-backdrop';
 import { FullScreenPlayerImage } from '/@/renderer/features/player/components/full-screen-player-image';
 import {
     FullScreenPlayerControls,
@@ -67,6 +68,7 @@ interface BackgroundImageProps {
 const BackgroundImage = memo(({ dynamicBackground, dynamicIsImage }: BackgroundImageProps) => {
     const currentSong = usePlayerSong();
     const { nextSong } = usePlayerData();
+    const dynamicImageSource = useFullScreenPlayerStore((state) => state.dynamicImageSource);
 
     const currentImageUrl = useItemImageUrl({
         id: currentSong?.imageId || undefined,
@@ -113,6 +115,10 @@ const BackgroundImage = memo(({ dynamicBackground, dynamicIsImage }: BackgroundI
 
     if (!dynamicBackground || !dynamicIsImage) {
         return null;
+    }
+
+    if (dynamicImageSource === 'artist') {
+        return <ArtistBackdrop className={styles.backgroundImage} />;
     }
 
     const getBackgroundImageUrl = (

@@ -5,6 +5,8 @@ import { immer } from 'zustand/middleware/immer';
 import { shallow } from 'zustand/shallow';
 import { createWithEqualityFn } from 'zustand/traditional';
 
+export type FullScreenPlayerImageSource = 'album' | 'artist';
+
 export type FullScreenPlayerItemAlignment = 'center' | 'left' | 'right';
 
 export interface FullScreenPlayerSlice extends FullScreenPlayerState {
@@ -20,6 +22,7 @@ interface FullScreenPlayerState {
     coverArtSize: number;
     dynamicBackground?: boolean;
     dynamicImageBlur: number;
+    dynamicImageSource?: FullScreenPlayerImageSource;
     dynamicIsImage?: boolean;
     expanded: boolean;
     opacity: number;
@@ -44,6 +47,7 @@ export const useFullScreenPlayerStore = createWithEqualityFn<FullScreenPlayerSli
                 coverArtSize: 75,
                 dynamicBackground: true,
                 dynamicImageBlur: 6,
+                dynamicImageSource: 'album',
                 dynamicIsImage: false,
                 expanded: false,
                 opacity: 25,
