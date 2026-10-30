@@ -403,20 +403,17 @@
     overflow: hidden;
     -webkit-line-clamp: 2;
     font-size: clamp(2.2rem, 7cqh, 4.8rem);
-    font-weight: 900;
-    line-height: 0.9;
-    text-transform: uppercase;
-    letter-spacing: -0.04em;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.02em;
     overflow-wrap: anywhere;
     -webkit-box-orient: vertical;
 }
 
 .poster-artist {
-    font-size: clamp(0.9rem, 1.8cqh, 1.15rem);
+    font-size: clamp(1rem, 2.1cqh, 1.35rem);
     font-weight: 600;
     color: rgb(255 255 255 / 80%);
-    text-transform: uppercase;
-    letter-spacing: 0.22em;
 }
 
 .poster .panel {
@@ -581,4 +578,13 @@
 .disco-item {
     flex-shrink: 0;
     width: 8rem;
+}
+
+/* The queue gets a narrow, solid side panel, like Spotify's */
+.root.queue-tab {
+    --panel-width: min(26rem, 32cqw);
+}
+
+.queue-tab .panel {
+    background: var(--deep);
 }

@@ -684,6 +684,14 @@
             "showTranslation": "Translation",
             "related": "Related",
             "upNext": "Up next",
+            "queue": {
+                "more": "+{{count}} more",
+                "nextInQueue": "Next in queue",
+                "nothingPlayed": "Nothing played yet",
+                "nowPlaying": "Now playing",
+                "queue": "Queue",
+                "recent": "Recently played"
+            },
             "visualizer": "Visualizer",
             "noLyrics": "No lyrics found",
             "layout": {

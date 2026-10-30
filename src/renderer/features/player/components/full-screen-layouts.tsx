@@ -277,7 +277,12 @@ export const FullScreenLayoutView = ({
     const View = LAYOUT_VIEWS[layout];
 
     return (
-        <div className={clsx(styles.root, styles[layout], { [styles.open]: isOpen })}>
+        <div
+            className={clsx(styles.root, styles[layout], {
+                [styles.open]: isOpen,
+                [styles.queueTab]: activeTab === 'queue',
+            })}
+        >
             <AnimatePresence initial={false} mode="wait">
                 <motion.div
                     animate={{ opacity: 1 }}

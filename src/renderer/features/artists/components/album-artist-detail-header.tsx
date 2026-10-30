@@ -303,6 +303,8 @@ export const AlbumArtistDetailHeader = forwardRef<HTMLDivElement, AlbumArtistDet
                 imageUrl={headerImageUrl}
                 item={{
                     blurHash: detailQuery.data?.blurHash,
+                    // No "Album artist" label: it only linked to the list of every album artist
+                    children: null,
                     imageId: detailQuery.data?.imageId,
                     imageUrl: detailQuery.data?.imageUrl,
                     route: AppRoute.LIBRARY_ALBUM_ARTISTS,

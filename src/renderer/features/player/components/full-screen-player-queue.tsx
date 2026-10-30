@@ -9,6 +9,7 @@ import { Lyrics } from '/@/renderer/features/lyrics/lyrics';
 import { PlayQueue } from '/@/renderer/features/now-playing/components/play-queue';
 import { FullScreenSimilarSongs } from '/@/renderer/features/player/components/full-screen-similar-songs';
 import { LidarrDiscography } from '/@/renderer/features/player/components/lidarr-discography';
+import { QueueList } from '/@/renderer/features/player/components/queue-list';
 import {
     useIsArtistBackdropMode,
     useListSettings,
@@ -153,11 +154,13 @@ export const FullScreenPlayerControls = Controls;
 
 export const FullScreenPlayerQueue = ({ className }: { className?: string }) => {
     const { activeTab } = useFullScreenPlayerStore();
+    const { setStore } = useFullScreenPlayerStoreActions();
     const { webAudio } = usePlaybackSettings();
     const visualizerType = useSettingsStore((store) => store.visualizer.type);
     const { table } = useListSettings(ItemListKey.FULL_SCREEN) || {};
+    // The layouts' solid panel doesn't need the edge fade, which hides the playing song
     const queueContainerClassName = clsx(styles.queueContainer, {
-        [styles.queueContainerFadeTopBottom]: !table?.enableHeader,
+        [styles.queueContainerFadeTopBottom]: !table?.enableHeader && !className,
     });
     const isPanelOpen = isDesktopPanelOpen(activeTab, webAudio);
     const isCollapsed = !isPanelOpen;
@@ -180,11 +183,15 @@ export const FullScreenPlayerQueue = ({ className }: { className?: string }) => 
                         key="queue"
                         variants={moduleContentVariants}
                     >
-                        <PlayQueue
-                            enableScrollShadow={false}
-                            listKey={ItemListKey.FULL_SCREEN}
-                            searchTerm={undefined}
-                        />
+                        {className ? (
+                            <QueueList onClose={() => setStore({ activeTab: '' })} />
+                        ) : (
+                            <PlayQueue
+                                enableScrollShadow={false}
+                                listKey={ItemListKey.FULL_SCREEN}
+                                searchTerm={undefined}
+                            />
+                        )}
                     </motion.div>
                 ) : activeTab === 'related' ? (
                     <motion.div
