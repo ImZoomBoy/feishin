@@ -13,6 +13,7 @@ import { lyricsQueries } from '/@/renderer/features/lyrics/api/lyrics-api';
 import { Lyrics } from '/@/renderer/features/lyrics/lyrics';
 import { PlayQueue } from '/@/renderer/features/now-playing/components/play-queue';
 import { PlayQueueListControls } from '/@/renderer/features/now-playing/components/play-queue-list-controls';
+import { QueueList } from '/@/renderer/features/player/components/queue-list';
 import { AppRoute } from '/@/renderer/router/routes';
 import {
     useCombinedLyricsAndVisualizer,
@@ -131,6 +132,13 @@ export const SidebarPlayQueue = () => {
         storage: localStorage,
     });
 
+    // Spotify-style list; searching falls back to the table, which handles results
+    const queue = search ? (
+        <PlayQueue listKey={ItemListKey.SIDE_QUEUE} ref={tableRef} searchTerm={search} />
+    ) : (
+        <QueueList />
+    );
+
     const renderPanel = (panelType: SidebarPanelType) => {
         if (panelType === 'queue') {
             return (
@@ -141,13 +149,7 @@ export const SidebarPlayQueue = () => {
                         tableRef={tableRef}
                         type={ItemListKey.SIDE_QUEUE}
                     />
-                    <div className={styles.playQueueSection}>
-                        <PlayQueue
-                            listKey={ItemListKey.SIDE_QUEUE}
-                            ref={tableRef}
-                            searchTerm={search}
-                        />
-                    </div>
+                    <div className={styles.playQueueSection}>{queue}</div>
                 </Stack>
             );
         }
@@ -264,13 +266,7 @@ export const SidebarPlayQueue = () => {
                             type={ItemListKey.SIDE_QUEUE}
                         />
                         <Flex className={styles.queueOnlyContent} direction="column">
-                            <div className={styles.playQueueSection}>
-                                <PlayQueue
-                                    listKey={ItemListKey.SIDE_QUEUE}
-                                    ref={tableRef}
-                                    searchTerm={search}
-                                />
-                            </div>
+                            <div className={styles.playQueueSection}>{queue}</div>
                         </Flex>
                     </Stack>
                 )

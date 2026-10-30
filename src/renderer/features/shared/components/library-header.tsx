@@ -233,7 +233,8 @@ export const LibraryHeader = forwardRef(
                 )}
                 {title && (
                     <div className={styles.metadataSection}>
-                        {item.children ? (
+                        {/* children: null hides the type label */}
+                        {item.children === null ? null : item.children ? (
                             <div className={styles.itemType}>{item.children}</div>
                         ) : (
                             <Text

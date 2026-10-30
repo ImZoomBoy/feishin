@@ -1,0 +1,171 @@
+.root {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    padding: 0.5rem 0.5rem 0;
+}
+
+.header {
+    display: flex;
+    gap: 1.25rem;
+    align-items: center;
+    padding: 0.25rem 0.5rem 1rem;
+}
+
+.tab {
+    padding: 0.4rem 0;
+    font: inherit;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: rgb(255 255 255 / 60%);
+    cursor: pointer;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+
+    &:hover {
+        color: rgb(255 255 255 / 90%);
+    }
+}
+
+.active {
+    color: rgb(255 255 255 / 95%);
+    border-bottom-color: var(--theme-colors-primary);
+}
+
+.close {
+    margin-left: auto;
+}
+
+.list {
+    flex: 1;
+    min-height: 0;
+    padding: 0 0 2rem;
+    overflow-y: auto;
+
+    section + section {
+        margin-top: 1.75rem;
+    }
+
+    h3 {
+        padding: 0 0.5rem;
+        margin: 0 0 0.6rem;
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: rgb(255 255 255 / 95%);
+    }
+}
+
+.row {
+    position: relative;
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    width: 100%;
+    padding: 0.4rem 0.5rem;
+    cursor: default;
+    user-select: none;
+    outline: none;
+    border-radius: 6px;
+
+    &:hover {
+        background: rgb(255 255 255 / 8%);
+
+        .play {
+            opacity: 1;
+        }
+    }
+}
+
+.selected,
+.selected:hover {
+    background: rgb(255 255 255 / 16%);
+}
+
+/* Where a dragged song will land */
+.drop-top::before,
+.drop-bottom::after {
+    position: absolute;
+    right: 0.5rem;
+    left: 0.5rem;
+    height: 2px;
+    content: '';
+    background: var(--theme-colors-primary);
+    border-radius: 1px;
+}
+
+.drop-top::before {
+    top: -1px;
+}
+
+.drop-bottom::after {
+    bottom: -1px;
+}
+
+.cover-wrap {
+    position: relative;
+    flex-shrink: 0;
+}
+
+/* Play button over the cover on hover */
+.play {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    cursor: pointer;
+    background: rgb(0 0 0 / 55%);
+    border: none;
+    border-radius: 4px;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+
+.cover {
+    flex-shrink: 0;
+    width: 48px !important;
+    height: 48px !important;
+    overflow: hidden;
+    border-radius: 4px;
+}
+
+.text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.title,
+.artist {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.title {
+    font-size: 1rem;
+    color: rgb(255 255 255 / 95%);
+}
+
+.artist {
+    font-size: 0.875rem;
+    color: rgb(255 255 255 / 60%);
+}
+
+.current {
+    .title {
+        color: var(--theme-colors-primary);
+    }
+}
+
+.note {
+    padding: 0.5rem;
+    margin: 0;
+    font-size: 0.875rem;
+    color: rgb(255 255 255 / 60%);
+}
