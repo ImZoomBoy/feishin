@@ -1,4 +1,4 @@
-import { useQueries } from '@tanstack/react-query';
+import { useQueries, useQuery } from '@tanstack/react-query';
 import { AnimatePresence, motion } from 'motion/react';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -20,11 +20,20 @@ const AUDIODB_FANART_FIELDS = [
 // fanart.tv artist backgrounds are 1920x1080 and need a (free) personal API key.
 const FANART_TV_URL = 'https://webservice.fanart.tv/v3/music/';
 
+export interface ArtistInfo {
+    country?: string;
+    formed?: string;
+    genre?: string;
+    // Transparent PNG of the artist's logo, when one exists
+    logo?: string;
+}
+
 interface ArtistPhotos {
     // Sharp 16:9 photos, best first
     backdrops: string[];
     // Lower resolution photos, only used when there are no backdrops
     fallbacks: string[];
+    info: ArtistInfo;
 }
 
 const shuffle = <T,>(items: T[]) => [...items].sort(() => Math.random() - 0.5);
@@ -40,18 +49,20 @@ const fetchJson = async (url: string) => {
 
 const fetchArtistPhotos = async (name: string, fanartApiKey?: string): Promise<ArtistPhotos> => {
     const artist = (await fetchJson(AUDIODB_URL + encodeURIComponent(name)))?.artists?.[0];
-    if (!artist) return { backdrops: [], fallbacks: [] };
+    if (!artist) return { backdrops: [], fallbacks: [], info: {} };
 
     const audioDbFanart: string[] = AUDIODB_FANART_FIELDS.map((field) => artist[field]).filter(
         Boolean,
     );
 
     let fanartTv: string[] = [];
+    let fanartLogo: string | undefined;
     if (fanartApiKey && artist.strMusicBrainzID) {
         const data = await fetchJson(
             `${FANART_TV_URL}${artist.strMusicBrainzID}?api_key=${encodeURIComponent(fanartApiKey)}`,
         );
         fanartTv = (data?.artistbackground ?? []).map((image: { url: string }) => image.url);
+        fanartLogo = data?.hdmusiclogo?.[0]?.url ?? data?.musiclogo?.[0]?.url;
     }
 
     const backdrops = [...shuffle(fanartTv), ...shuffle(audioDbFanart)];
@@ -62,7 +73,41 @@ const fetchArtistPhotos = async (name: string, fanartApiKey?: string): Promise<A
     return {
         backdrops,
         fallbacks: [artist.strArtistThumb].filter(Boolean),
+        info: {
+            country: artist.strCountry || undefined,
+            formed: artist.intFormedYear || undefined,
+            genre: artist.strGenre || artist.strStyle || undefined,
+            logo: fanartLogo || artist.strArtistLogo || undefined,
+        },
     };
+};
+
+const artistPhotosQuery = (name: string, fanartApiKey?: string) => ({
+    gcTime: Infinity,
+    queryFn: () => fetchArtistPhotos(name, fanartApiKey),
+    queryKey: ['artist-photos', name, Boolean(fanartApiKey)],
+    retry: false,
+    staleTime: Infinity,
+});
+
+// Song artists first (the performers), then the album artist, e.g. for compilations
+const useSongArtists = () => {
+    const song = usePlayerSong();
+    return useMemo(() => {
+        const all = [...(song?.artists ?? []), ...(song?.albumArtists ?? [])];
+        return all.filter((a, i) => a.name && all.findIndex((b) => b.name === a.name) === i);
+    }, [song?.artists, song?.albumArtists]);
+};
+
+// Logo and facts (formed, country, genre) for the current song's main artist
+export const useArtistInfo = (): ArtistInfo => {
+    const fanartApiKey = useFullScreenPlayerStore((state) => state.fanartApiKey)?.trim();
+    const primary = useSongArtists()[0];
+    const { data } = useQuery({
+        ...artistPhotosQuery(primary?.name ?? '', fanartApiKey),
+        enabled: Boolean(primary?.name),
+    });
+    return data?.info ?? {};
 };
 
 const preload = (url: string) =>
@@ -75,15 +120,15 @@ const preload = (url: string) =>
 
 // Full screen player background that rotates through photos of the current song's artist.
 // Falls back to the artist image from the music server.
-export const ArtistBackdrop = ({ className }: { className: string }) => {
-    const song = usePlayerSong();
+export const ArtistBackdrop = ({
+    className,
+    position = 'center 25%',
+}: {
+    className: string;
+    position?: string;
+}) => {
     const fanartApiKey = useFullScreenPlayerStore((state) => state.fanartApiKey)?.trim();
-
-    // Song artists first (the performers), then the album artist, e.g. for compilations
-    const artists = useMemo(() => {
-        const all = [...(song?.artists ?? []), ...(song?.albumArtists ?? [])];
-        return all.filter((a, i) => a.name && all.findIndex((b) => b.name === a.name) === i);
-    }, [song?.artists, song?.albumArtists]);
+    const artists = useSongArtists();
 
     const primary = artists[0];
 
@@ -95,13 +140,7 @@ export const ArtistBackdrop = ({ className }: { className: string }) => {
     });
 
     const results = useQueries({
-        queries: artists.slice(0, 3).map((artist) => ({
-            gcTime: Infinity,
-            queryFn: () => fetchArtistPhotos(artist.name, fanartApiKey),
-            queryKey: ['artist-photos', artist.name, Boolean(fanartApiKey)],
-            retry: false,
-            staleTime: Infinity,
-        })),
+        queries: artists.slice(0, 3).map((artist) => artistPhotosQuery(artist.name, fanartApiKey)),
     });
 
     const photoKey = results.map((r) => r.dataUpdatedAt).join();
@@ -158,7 +197,7 @@ export const ArtistBackdrop = ({ className }: { className: string }) => {
                     exit={{ opacity: 0 }}
                     initial={{ opacity: 0 }}
                     key={url}
-                    style={{ backgroundImage: `url("${url}")`, backgroundPosition: 'center 25%' }}
+                    style={{ backgroundImage: `url("${url}")`, backgroundPosition: position }}
                     transition={{ duration: 1.5, ease: 'linear' }}
                 />
             )}

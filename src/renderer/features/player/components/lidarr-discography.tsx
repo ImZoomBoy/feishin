@@ -12,7 +12,7 @@ import { useCurrentServerId, useFullScreenPlayerStore, usePlayerSong } from '/@/
 import { Album, AlbumListSort, LibraryItem, SortOrder } from '/@/shared/types/domain-types';
 import { Play } from '/@/shared/types/types';
 
-type GroupKey =
+export type GroupKey =
     | 'compilation'
     | 'ep'
     | 'library'
@@ -22,7 +22,7 @@ type GroupKey =
     | 'soundtrack'
     | 'studio';
 
-interface LidarrAlbum {
+export interface LidarrAlbum {
     albumType?: string;
     foreignAlbumId?: string;
     id: number;
@@ -50,7 +50,7 @@ const GROUP_ORDER: GroupKey[] = [
     'library',
 ];
 
-interface DiscographyItem {
+export interface DiscographyItem {
     group: GroupKey;
     key: string;
     libraryAlbum?: Album;
@@ -103,9 +103,11 @@ const groupOf = (album: LidarrAlbum): GroupKey => {
     return 'other';
 };
 
+export type RequestState = 'done' | 'error' | 'pending';
+
 const yearOf = (date?: string) => (date ? Number(date.slice(0, 4)) || undefined : undefined);
 
-const DiscographyTile = ({
+export const DiscographyTile = ({
     isPlaying,
     item,
     onPlay,
@@ -116,7 +118,7 @@ const DiscographyTile = ({
     item: DiscographyItem;
     onPlay: (album: Album) => void;
     onRequest: (album: LidarrAlbum) => void;
-    requestState?: 'done' | 'error' | 'pending';
+    requestState?: RequestState;
 }) => {
     const { t } = useTranslation();
     const libraryCover = useItemImageUrl({
@@ -180,9 +182,9 @@ const DiscographyTile = ({
     );
 };
 
-// Full screen player tab: the artist's releases from Lidarr, grouped by type,
-// with albums missing from the library greyed out and one click to request them.
-export const LidarrDiscography = () => {
+// The current artist's releases from Lidarr, grouped by type and matched against the
+// library, plus actions to play an owned album or ask Lidarr to fetch a missing one.
+export const useLidarrDiscography = () => {
     const { t } = useTranslation();
     const song = usePlayerSong();
     const serverId = useCurrentServerId();
@@ -191,7 +193,7 @@ export const LidarrDiscography = () => {
     const lidarrUrl = useFullScreenPlayerStore((state) => state.lidarrUrl)?.trim();
     const lidarrApiKey = useFullScreenPlayerStore((state) => state.lidarrApiKey)?.trim();
     const isConfigured = Boolean(lidarrUrl && lidarrApiKey);
-    const [requests, setRequests] = useState<Record<number, 'done' | 'error' | 'pending'>>({});
+    const [requests, setRequests] = useState<Record<number, RequestState>>({});
 
     const artist =
         song?.albumArtists?.find((a) => normalize(a.name) !== 'variousartists') ??
@@ -342,6 +344,35 @@ export const LidarrDiscography = () => {
     else if (lidarrArtistsQuery.isSuccess && !lidarrArtist)
         notice = t('page.fullscreenPlayer.discography.notInLidarr', { artist: artist?.name });
 
+    return {
+        currentAlbumId: song?.albumId,
+        groups,
+        isLoading,
+        notice,
+        owned,
+        playAlbum,
+        request: (album: LidarrAlbum) => requestMutation.mutate(album),
+        requests,
+        total,
+    };
+};
+
+// Full screen player tab: the artist's releases from Lidarr, grouped by type,
+// with albums missing from the library greyed out and one click to request them.
+export const LidarrDiscography = () => {
+    const { t } = useTranslation();
+    const {
+        currentAlbumId,
+        groups,
+        isLoading,
+        notice,
+        owned,
+        playAlbum,
+        request,
+        requests,
+        total,
+    } = useLidarrDiscography();
+
     return (
         <div className={styles.container}>
             <div className={styles.summary}>
@@ -370,12 +401,12 @@ export const LidarrDiscography = () => {
                                     <DiscographyTile
                                         isPlaying={Boolean(
                                             item.libraryAlbum &&
-                                            item.libraryAlbum.id === song?.albumId,
+                                            item.libraryAlbum.id === currentAlbumId,
                                         )}
                                         item={item}
                                         key={item.key}
                                         onPlay={playAlbum}
-                                        onRequest={(album) => requestMutation.mutate(album)}
+                                        onRequest={request}
                                         requestState={
                                             item.lidarrAlbum
                                                 ? requests[item.lidarrAlbum.id]

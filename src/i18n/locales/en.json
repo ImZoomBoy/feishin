@@ -663,7 +663,23 @@
             "related": "Related",
             "upNext": "Up next",
             "visualizer": "Visualizer",
-            "noLyrics": "No lyrics found"
+            "noLyrics": "No lyrics found",
+            "layout": {
+                "cinema": "Cinema",
+                "classic": "Original",
+                "editorial": "Editorial",
+                "format": "Format",
+                "formed": "Formed",
+                "genre": "Genre",
+                "nowPlaying": "Now playing",
+                "origin": "Origin",
+                "poster": "Poster",
+                "refined": "Classic, refined",
+                "seeAll": "See all",
+                "stage": "Artist stage",
+                "track": "Track {{number}}",
+                "year": "Year"
+            }
         },
         "genreList": {
             "showAlbums": "Show $t(entity.genre, {\"count\": 1}) $t(entity.album, {\"count\": 2})",
@@ -1654,7 +1670,7 @@
                 "barLevel": "Bar-Level"
             },
             "gradient": {
-                "classic": "Classic",
+                "classic": "Original",
                 "prism": "Prism",
                 "rainbow": "Rainbow",
                 "steelblue": "Steelblue",

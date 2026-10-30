@@ -85,7 +85,7 @@
 }
 
 .grid-container-collapsed {
-    transform: translateX(100%);
+    transform: translateX(var(--collapsed-offset, 100%));
 
     @media screen and (orientation: portrait) {
         transform: translateY(100%);

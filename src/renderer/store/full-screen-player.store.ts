@@ -7,7 +7,19 @@ import { createWithEqualityFn } from 'zustand/traditional';
 
 export type FullScreenPlayerImageSource = 'album' | 'artist';
 
+// Artist photo led layouts, then 'classic' (Feishin's original layout). The order sets the hotkeys.
+export const FULL_SCREEN_LAYOUTS = [
+    'cinema',
+    'editorial',
+    'refined',
+    'poster',
+    'stage',
+    'classic',
+] as const;
+
 export type FullScreenPlayerItemAlignment = 'center' | 'left' | 'right';
+
+export type FullScreenPlayerLayout = (typeof FULL_SCREEN_LAYOUTS)[number];
 
 export interface FullScreenPlayerSlice extends FullScreenPlayerState {
     actions: {
@@ -26,6 +38,7 @@ interface FullScreenPlayerState {
     dynamicIsImage?: boolean;
     expanded: boolean;
     fanartApiKey?: string;
+    layout?: FullScreenPlayerLayout;
     lidarrApiKey?: string;
     lidarrUrl?: string;
     opacity: number;
@@ -53,6 +66,7 @@ export const useFullScreenPlayerStore = createWithEqualityFn<FullScreenPlayerSli
                 dynamicImageSource: 'album',
                 dynamicIsImage: false,
                 expanded: false,
+                layout: 'classic',
                 opacity: 25,
                 playerItemAlignment: 'center',
                 titleDisplayType: 'scroll',

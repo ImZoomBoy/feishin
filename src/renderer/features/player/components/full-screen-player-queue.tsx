@@ -151,7 +151,7 @@ const Controls = () => {
 
 export const FullScreenPlayerControls = Controls;
 
-export const FullScreenPlayerQueue = () => {
+export const FullScreenPlayerQueue = ({ className }: { className?: string }) => {
     const { activeTab } = useFullScreenPlayerStore();
     const { webAudio } = usePlaybackSettings();
     const visualizerType = useSettingsStore((store) => store.visualizer.type);
@@ -165,8 +165,8 @@ export const FullScreenPlayerQueue = () => {
 
     return (
         <div
-            className={clsx(styles.gridContainer, 'full-screen-player-queue-container', {
-                [styles.gridContainerBackdrop]: isBackdropMode,
+            className={clsx(styles.gridContainer, 'full-screen-player-queue-container', className, {
+                [styles.gridContainerBackdrop]: isBackdropMode && !className,
                 [styles.gridContainerCollapsed]: isCollapsed,
             })}
         >
