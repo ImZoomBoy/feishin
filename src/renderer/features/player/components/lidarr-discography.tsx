@@ -17,6 +17,7 @@ import {
     LidarrClient,
     lidarrRequest,
     MetadataProfile,
+    profileAllows,
     ReleaseGroup,
     releaseGroupCover,
     restoreProfile,
@@ -311,6 +312,10 @@ export const useLidarrDiscography = () => {
         staleTime: 24 * 60 * 60 * 1000,
     });
 
+    const currentProfile = profilesQuery.data?.find(
+        (profile) => profile.id === lidarrArtist?.metadataProfileId,
+    );
+
     const groups = useMemo(() => {
         const libraryAlbums = libraryQuery.data?.items ?? [];
         const byReleaseGroup = new Map(
@@ -354,11 +359,17 @@ export const useLidarrDiscography = () => {
             year: yearOf(album.releaseDate),
         }));
 
-        // Releases Lidarr isn't tracking, e.g. live albums left out by the artist's profile
+        // Releases Lidarr isn't tracking
         const inLidarr = new Set(lidarrAlbums.map((album) => album.foreignAlbumId));
-        const outside = (releaseGroupsQuery.data ?? []).filter(
+        const notInLidarr = (releaseGroupsQuery.data ?? []).filter(
             (group) => !inLidarr.has(group.id) && groupOfReleaseGroup(group),
         );
+        // Only offer the ones the artist's profile leaves out, e.g. live albums. If the
+        // profile already allows a release's type, Lidarr skipped it on purpose (usually
+        // a bootleg or other unofficial release), and no profile switch would add it.
+        const outside = currentProfile
+            ? notInLidarr.filter((group) => !profileAllows(currentProfile, group))
+            : [];
         const used = new Set<string>();
 
         // Library albums Lidarr doesn't know about go in their MusicBrainz group if possible
@@ -366,8 +377,8 @@ export const useLidarrDiscography = () => {
             .filter((album) => !matched.has(album.id))
             .forEach((album) => {
                 const group =
-                    outside.find((g) => !used.has(g.id) && g.id === album.mbzReleaseGroupId) ??
-                    outside.find(
+                    notInLidarr.find((g) => !used.has(g.id) && g.id === album.mbzReleaseGroupId) ??
+                    notInLidarr.find(
                         (g) => !used.has(g.id) && normalize(g.title) === normalize(album.name),
                     );
                 if (group) used.add(group.id);
@@ -398,7 +409,7 @@ export const useLidarrDiscography = () => {
             items: items.filter((item) => item.group === key),
             key,
         })).filter((group) => group.items.length);
-    }, [libraryQuery.data, lidarrAlbumsQuery.data, releaseGroupsQuery.data]);
+    }, [currentProfile, libraryQuery.data, lidarrAlbumsQuery.data, releaseGroupsQuery.data]);
 
     const total = groups.reduce((sum, group) => sum + group.items.length, 0);
     const owned = groups.reduce(

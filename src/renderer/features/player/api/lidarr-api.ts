@@ -85,11 +85,15 @@ export const fetchReleaseGroups = async (artistMbid: string): Promise<ReleaseGro
     const groups: ReleaseGroup[] = [];
     for (let offset = 0, page = 0; page < 5; page += 1) {
         if (page > 0) await sleep(1100);
-        const res = await fetch(
+        const url =
             `https://musicbrainz.org/ws/2/release-group?artist=${artistMbid}` +
-                `&release-group-status=website-default&limit=100&offset=${offset}&fmt=json`,
-            { headers: { Accept: 'application/json' } },
-        );
+            `&release-group-status=website-default&limit=100&offset=${offset}&fmt=json`;
+        let res = await fetch(url, { headers: { Accept: 'application/json' } });
+        // MusicBrainz answers 503 when it's busy or we're going too fast: back off and retry
+        for (let attempt = 1; res.status === 503 && attempt <= 4; attempt += 1) {
+            await sleep(2000 * attempt);
+            res = await fetch(url, { headers: { Accept: 'application/json' } });
+        }
         if (!res.ok) throw new Error(`MusicBrainz returned ${res.status}`);
         const data = await res.json();
         const batch: ReleaseGroup[] = data['release-groups'] ?? [];
@@ -223,7 +227,13 @@ export const getReleaseOutsideProfile = async ({
     const current = profiles.find((profile) => profile.id === artist.metadataProfileId);
     if (!current) throw new Error("Couldn't find the artist's metadata profile");
 
-    let target = profileAllows(current, group) ? current : pickProfile(profiles, current, group);
+    // The profile already allows this type, so Lidarr left it out for another reason
+    // (usually an unofficial release). Switching profiles wouldn't add it.
+    if (profileAllows(current, group)) {
+        throw new Error("Lidarr doesn't list this release, so it can't be fetched");
+    }
+
+    let target = pickProfile(profiles, current, group);
     if (!target) {
         target = await lidarrRequest<MetadataProfile>(
             client,
