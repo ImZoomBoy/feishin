@@ -1,3 +1,4 @@
+import { closeAllModals, openModal } from '@mantine/modals';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import clsx from 'clsx';
 import { useMemo, useState } from 'react';
@@ -7,13 +8,35 @@ import styles from './lidarr-discography.module.css';
 
 import { useItemImageUrl } from '/@/renderer/components/item-image/item-image';
 import { albumQueries } from '/@/renderer/features/albums/api/album-api';
+import {
+    fetchReleaseGroups,
+    getReleaseOutsideProfile,
+    LidarrAlbum,
+    LidarrArtist,
+    LidarrClient,
+    lidarrRequest,
+    MetadataProfile,
+    ReleaseGroup,
+    releaseGroupCover,
+    restoreProfile,
+    searchAlbum,
+} from '/@/renderer/features/player/api/lidarr-api';
 import { usePlayer } from '/@/renderer/features/player/context/player-context';
-import { useCurrentServerId, useFullScreenPlayerStore, usePlayerSong } from '/@/renderer/store';
+import {
+    useCurrentServerId,
+    useFullScreenPlayerStore,
+    useFullScreenPlayerStoreActions,
+    usePlayerSong,
+} from '/@/renderer/store';
+import { ConfirmModal } from '/@/shared/components/modal/modal';
+import { Text } from '/@/shared/components/text/text';
+import { toast } from '/@/shared/components/toast/toast';
 import { Album, AlbumListSort, LibraryItem, SortOrder } from '/@/shared/types/domain-types';
 import { Play } from '/@/shared/types/types';
 
 export type GroupKey =
     | 'compilation'
+    | 'demo'
     | 'ep'
     | 'library'
     | 'live'
@@ -22,27 +45,11 @@ export type GroupKey =
     | 'soundtrack'
     | 'studio';
 
-export interface LidarrAlbum {
-    albumType?: string;
-    foreignAlbumId?: string;
-    id: number;
-    images?: { coverType?: string; remoteUrl?: string; url?: string }[];
-    monitored?: boolean;
-    releaseDate?: string;
-    secondaryTypes?: (string | { name?: string })[];
-    statistics?: { trackFileCount?: number };
-    title: string;
-}
-
-interface LidarrArtist {
-    artistName: string;
-    id: number;
-}
-
 const GROUP_ORDER: GroupKey[] = [
     'studio',
     'ep',
     'live',
+    'demo',
     'compilation',
     'soundtrack',
     'single',
@@ -55,9 +62,13 @@ export interface DiscographyItem {
     key: string;
     libraryAlbum?: Album;
     lidarrAlbum?: LidarrAlbum;
+    // Set for releases Lidarr doesn't track, found on MusicBrainz
+    releaseGroup?: ReleaseGroup;
     title: string;
     year?: number;
 }
+
+export type RequestState = 'done' | 'error' | 'pending';
 
 // Loose match for names and titles: "The Beatles" == "beatles", "Radio‐Aktivität" == "radio-aktivitat"
 const normalize = (value?: string) =>
@@ -68,25 +79,14 @@ const normalize = (value?: string) =>
         .replace(/^the\s+/, '')
         .replace(/[^a-z0-9]/g, '');
 
-const lidarrRequest = async <T,>(
-    baseUrl: string,
-    apiKey: string,
-    path: string,
-    init?: RequestInit,
-): Promise<T> => {
-    const res = await fetch(`${baseUrl.replace(/\/+$/, '')}/api/v1${path}`, {
-        ...init,
-        headers: { 'Content-Type': 'application/json', 'X-Api-Key': apiKey },
-    });
-    if (!res.ok) throw new Error(`Lidarr returned ${res.status}`);
-    return res.status === 204 ? (null as T) : res.json();
-};
-
-const groupOf = (album: LidarrAlbum): GroupKey => {
-    const secondary = (album.secondaryTypes || []).map((type) =>
-        (typeof type === 'string' ? type : type.name || '').toLowerCase(),
-    );
+// Shared by Lidarr albums and MusicBrainz release groups, which use the same type names
+const groupOfTypes = (
+    primaryType?: null | string,
+    secondaryTypes: string[] = [],
+): GroupKey | null => {
+    const secondary = secondaryTypes.map((type) => type.toLowerCase());
     if (secondary.includes('live')) return 'live';
+    if (secondary.includes('demo')) return 'demo';
     if (
         secondary.some((type) =>
             ['compilation', 'dj-mix', 'mixtape/street', 'remix'].includes(type),
@@ -94,16 +94,28 @@ const groupOf = (album: LidarrAlbum): GroupKey => {
     )
         return 'compilation';
     if (secondary.includes('soundtrack')) return 'soundtrack';
-    if (secondary.length) return 'other';
+    if (secondary.length) return null; // interviews, audiobooks, spoken word...
 
-    const primary = (album.albumType || '').toLowerCase();
+    const primary = (primaryType || '').toLowerCase();
     if (primary === 'album') return 'studio';
     if (primary === 'ep') return 'ep';
     if (primary === 'single') return 'single';
-    return 'other';
+    return null;
 };
 
-export type RequestState = 'done' | 'error' | 'pending';
+const groupOfLidarr = (album: LidarrAlbum): GroupKey =>
+    groupOfTypes(
+        album.albumType,
+        (album.secondaryTypes || []).map((type) =>
+            typeof type === 'string' ? type : type.name || '',
+        ),
+    ) ?? 'other';
+
+// Singles are left out of the MusicBrainz fill: most artists have far too many
+const groupOfReleaseGroup = (group: ReleaseGroup) => {
+    const key = groupOfTypes(group['primary-type'], group['secondary-types']);
+    return key === 'single' ? null : key;
+};
 
 const yearOf = (date?: string) => (date ? Number(date.slice(0, 4)) || undefined : undefined);
 
@@ -117,7 +129,7 @@ export const DiscographyTile = ({
     isPlaying: boolean;
     item: DiscographyItem;
     onPlay: (album: Album) => void;
-    onRequest: (album: LidarrAlbum) => void;
+    onRequest: (item: DiscographyItem) => void;
     requestState?: RequestState;
 }) => {
     const { t } = useTranslation();
@@ -129,18 +141,44 @@ export const DiscographyTile = ({
     const lidarrCover = item.lidarrAlbum?.images?.find(
         (image) => image.coverType?.toLowerCase() === 'cover',
     )?.remoteUrl;
-    const cover = libraryCover || lidarrCover;
+    const [coverFailed, setCoverFailed] = useState(false);
+    const cover =
+        libraryCover ||
+        lidarrCover ||
+        (item.releaseGroup && !coverFailed ? releaseGroupCover(item.releaseGroup.id) : undefined);
     const owned = Boolean(item.libraryAlbum);
+    const outsideLidarr = !owned && !item.lidarrAlbum && Boolean(item.releaseGroup);
+
+    const tag = outsideLidarr
+        ? t('page.fullscreenPlayer.discography.notTracked')
+        : item.lidarrAlbum?.monitored
+          ? t('page.fullscreenPlayer.discography.wanted')
+          : t('page.fullscreenPlayer.discography.missing');
+
+    const label =
+        requestState === 'pending'
+            ? t('page.fullscreenPlayer.discography.adding')
+            : requestState === 'done'
+              ? t('page.fullscreenPlayer.discography.searching')
+              : requestState === 'error'
+                ? t('page.fullscreenPlayer.discography.failed')
+                : outsideLidarr
+                  ? t('page.fullscreenPlayer.discography.get')
+                  : t('page.fullscreenPlayer.discography.request');
 
     return (
         <div
-            className={clsx(styles.tile, { [styles.missing]: !owned, [styles.playing]: isPlaying })}
+            className={clsx(styles.tile, {
+                [styles.missing]: !owned,
+                [styles.outside]: outsideLidarr,
+                [styles.playing]: isPlaying,
+            })}
             onClick={() => item.libraryAlbum && onPlay(item.libraryAlbum)}
             title={item.title}
         >
             <div className={styles.art}>
                 {cover ? (
-                    <img alt="" loading="lazy" src={cover} />
+                    <img alt="" loading="lazy" onError={() => setCoverFailed(true)} src={cover} />
                 ) : (
                     <div className={styles.blank} />
                 )}
@@ -148,26 +186,18 @@ export const DiscographyTile = ({
                     <span className={styles.playButton} />
                 ) : (
                     <>
-                        <span className={styles.tag}>
-                            {item.lidarrAlbum?.monitored
-                                ? t('page.fullscreenPlayer.discography.wanted')
-                                : t('page.fullscreenPlayer.discography.missing')}
-                        </span>
-                        {item.lidarrAlbum && (
+                        <span className={styles.tag}>{tag}</span>
+                        {(item.lidarrAlbum || item.releaseGroup) && (
                             <button
                                 className={styles.request}
                                 disabled={requestState === 'pending' || requestState === 'done'}
                                 onClick={(event) => {
                                     event.stopPropagation();
-                                    onRequest(item.lidarrAlbum!);
+                                    onRequest(item);
                                 }}
                                 type="button"
                             >
-                                {requestState === 'done'
-                                    ? t('page.fullscreenPlayer.discography.searching')
-                                    : requestState === 'error'
-                                      ? t('page.fullscreenPlayer.discography.failed')
-                                      : t('page.fullscreenPlayer.discography.request')}
+                                {label}
                             </button>
                         )}
                     </>
@@ -182,18 +212,24 @@ export const DiscographyTile = ({
     );
 };
 
-// The current artist's releases from Lidarr, grouped by type and matched against the
-// library, plus actions to play an owned album or ask Lidarr to fetch a missing one.
+const groupLabel = (t: (key: string) => string, key: GroupKey) =>
+    t(`page.fullscreenPlayer.discography.typePlural.${key}`);
+
+// The current artist's releases from Lidarr and MusicBrainz, grouped by type and matched
+// against the library, plus actions to play an owned album or have Lidarr fetch one.
 export const useLidarrDiscography = () => {
     const { t } = useTranslation();
     const song = usePlayerSong();
     const serverId = useCurrentServerId();
     const player = usePlayer();
     const queryClient = useQueryClient();
+    const { setStore } = useFullScreenPlayerStoreActions();
     const lidarrUrl = useFullScreenPlayerStore((state) => state.lidarrUrl)?.trim();
     const lidarrApiKey = useFullScreenPlayerStore((state) => state.lidarrApiKey)?.trim();
-    const isConfigured = Boolean(lidarrUrl && lidarrApiKey);
-    const [requests, setRequests] = useState<Record<number, RequestState>>({});
+    const lidarrRestore = useFullScreenPlayerStore((state) => state.lidarrRestore);
+    const client: LidarrClient | undefined =
+        lidarrUrl && lidarrApiKey ? { apiKey: lidarrApiKey, url: lidarrUrl } : undefined;
+    const [requests, setRequests] = useState<Record<string, RequestState>>({});
 
     const artist =
         song?.albumArtists?.find((a) => normalize(a.name) !== 'variousartists') ??
@@ -214,8 +250,8 @@ export const useLidarrDiscography = () => {
     });
 
     const lidarrArtistsQuery = useQuery({
-        enabled: isConfigured,
-        queryFn: () => lidarrRequest<LidarrArtist[]>(lidarrUrl!, lidarrApiKey!, '/artist'),
+        enabled: Boolean(client),
+        queryFn: () => lidarrRequest<LidarrArtist[]>(client!, '/artist'),
         queryKey: ['lidarr', lidarrUrl, 'artists'],
         retry: false,
         staleTime: 10 * 60 * 1000,
@@ -230,16 +266,30 @@ export const useLidarrDiscography = () => {
     );
 
     const lidarrAlbumsQuery = useQuery({
-        enabled: Boolean(isConfigured && lidarrArtist),
-        queryFn: () =>
-            lidarrRequest<LidarrAlbum[]>(
-                lidarrUrl!,
-                lidarrApiKey!,
-                `/album?artistId=${lidarrArtist!.id}`,
-            ),
+        enabled: Boolean(client && lidarrArtist),
+        queryFn: () => lidarrRequest<LidarrAlbum[]>(client!, `/album?artistId=${lidarrArtist!.id}`),
         queryKey: ['lidarr', lidarrUrl, 'albums', lidarrArtist?.id],
         retry: false,
         staleTime: 2 * 60 * 1000,
+    });
+
+    const profilesQuery = useQuery({
+        enabled: Boolean(client),
+        queryFn: () => lidarrRequest<MetadataProfile[]>(client!, '/metadataprofile'),
+        queryKey: ['lidarr', lidarrUrl, 'metadataprofiles'],
+        retry: false,
+        staleTime: 10 * 60 * 1000,
+    });
+
+    // Everything else the artist released, to show what Lidarr isn't tracking
+    const artistMbid = lidarrArtist?.foreignArtistId;
+    const releaseGroupsQuery = useQuery({
+        enabled: Boolean(artistMbid),
+        gcTime: Infinity,
+        queryFn: () => fetchReleaseGroups(artistMbid!),
+        queryKey: ['musicbrainz', 'release-groups', artistMbid],
+        retry: 1,
+        staleTime: 24 * 60 * 60 * 1000,
     });
 
     const groups = useMemo(() => {
@@ -263,7 +313,7 @@ export const useLidarrDiscography = () => {
         // Then fall back to the title, once per library album, preferring albums over
         // singles with the same name (e.g. the "Autobahn" single vs the album)
         const byPreference = [...lidarrAlbums].sort(
-            (a, b) => Number(groupOf(a) !== 'studio') - Number(groupOf(b) !== 'studio'),
+            (a, b) => Number(groupOfLidarr(a) !== 'studio') - Number(groupOfLidarr(b) !== 'studio'),
         );
         byPreference.forEach((album) => {
             if (matches.has(album.id)) return;
@@ -277,7 +327,7 @@ export const useLidarrDiscography = () => {
         });
 
         const items: DiscographyItem[] = lidarrAlbums.map((album) => ({
-            group: groupOf(album),
+            group: groupOfLidarr(album),
             key: `lidarr-${album.id}`,
             libraryAlbum: matches.get(album.id),
             lidarrAlbum: album,
@@ -285,16 +335,41 @@ export const useLidarrDiscography = () => {
             year: yearOf(album.releaseDate),
         }));
 
-        // Albums in the library that Lidarr doesn't know about (or everything, without Lidarr)
+        // Releases Lidarr isn't tracking, e.g. live albums left out by the artist's profile
+        const inLidarr = new Set(lidarrAlbums.map((album) => album.foreignAlbumId));
+        const outside = (releaseGroupsQuery.data ?? []).filter(
+            (group) => !inLidarr.has(group.id) && groupOfReleaseGroup(group),
+        );
+        const used = new Set<string>();
+
+        // Library albums Lidarr doesn't know about go in their MusicBrainz group if possible
         libraryAlbums
             .filter((album) => !matched.has(album.id))
-            .forEach((album) =>
+            .forEach((album) => {
+                const group =
+                    outside.find((g) => !used.has(g.id) && g.id === album.mbzReleaseGroupId) ??
+                    outside.find(
+                        (g) => !used.has(g.id) && normalize(g.title) === normalize(album.name),
+                    );
+                if (group) used.add(group.id);
                 items.push({
-                    group: 'library',
+                    group: (group && groupOfReleaseGroup(group)) || 'library',
                     key: `library-${album.id}`,
                     libraryAlbum: album,
                     title: album.name,
                     year: album.originalYear || album.releaseYear || undefined,
+                });
+            });
+
+        outside
+            .filter((group) => !used.has(group.id))
+            .forEach((group) =>
+                items.push({
+                    group: groupOfReleaseGroup(group)!,
+                    key: `mb-${group.id}`,
+                    releaseGroup: group,
+                    title: group.title,
+                    year: yearOf(group['first-release-date']),
                 }),
             );
 
@@ -304,7 +379,7 @@ export const useLidarrDiscography = () => {
             items: items.filter((item) => item.group === key),
             key,
         })).filter((group) => group.items.length);
-    }, [libraryQuery.data, lidarrAlbumsQuery.data]);
+    }, [libraryQuery.data, lidarrAlbumsQuery.data, releaseGroupsQuery.data]);
 
     const total = groups.reduce((sum, group) => sum + group.items.length, 0);
     const owned = groups.reduce(
@@ -312,24 +387,119 @@ export const useLidarrDiscography = () => {
         0,
     );
 
+    const restoreKey = lidarrArtist ? `${lidarrUrl}|${lidarrArtist.id}` : undefined;
+    const restore = restoreKey ? lidarrRestore?.[restoreKey] : undefined;
+    const restoreProfileName = profilesQuery.data?.find((p) => p.id === restore?.profileId)?.name;
+
+    const refreshLidarr = () => {
+        queryClient.invalidateQueries({ queryKey: ['lidarr', lidarrUrl] });
+    };
+
+    const setRequestState = (key: string, state: RequestState) =>
+        setRequests((current) => ({ ...current, [key]: state }));
+
     const requestMutation = useMutation({
-        mutationFn: async (album: LidarrAlbum) => {
-            await lidarrRequest(lidarrUrl!, lidarrApiKey!, '/album/monitor', {
-                body: JSON.stringify({ albumIds: [album.id], monitored: true }),
-                method: 'PUT',
-            });
-            await lidarrRequest(lidarrUrl!, lidarrApiKey!, '/command', {
-                body: JSON.stringify({ albumIds: [album.id], name: 'AlbumSearch' }),
-                method: 'POST',
+        mutationFn: async (item: DiscographyItem) => {
+            if (item.lidarrAlbum) return searchAlbum(client!, item.lidarrAlbum.id);
+            return getReleaseOutsideProfile({
+                artistId: lidarrArtist!.id,
+                client: client!,
+                group: item.releaseGroup!,
+                onSwitchProfile: (value) => {
+                    // Keep the very first profile, if Feishin switches the artist more than once
+                    const all = useFullScreenPlayerStore.getState().lidarrRestore ?? {};
+                    if (!all[restoreKey!])
+                        setStore({ lidarrRestore: { ...all, [restoreKey!]: value } });
+                },
             });
         },
-        onError: (_error, album) => setRequests((state) => ({ ...state, [album.id]: 'error' })),
-        onMutate: (album) => setRequests((state) => ({ ...state, [album.id]: 'pending' })),
-        onSuccess: (_data, album) => {
-            setRequests((state) => ({ ...state, [album.id]: 'done' }));
-            queryClient.invalidateQueries({ queryKey: ['lidarr', lidarrUrl, 'albums'] });
+        onError: (error, item) => {
+            setRequestState(item.key, 'error');
+            toast.error({
+                message: (error as Error).message,
+                title: t('page.fullscreenPlayer.discography.failed'),
+            });
+            refreshLidarr();
+        },
+        onMutate: (item) => setRequestState(item.key, 'pending'),
+        onSuccess: (_data, item) => {
+            setRequestState(item.key, 'done');
+            refreshLidarr();
         },
     });
+
+    const restoreMutation = useMutation({
+        mutationFn: () => restoreProfile(client!, lidarrArtist!.id, restore!),
+        onError: (error) =>
+            toast.error({
+                message: (error as Error).message,
+                title: t('page.fullscreenPlayer.discography.failed'),
+            }),
+        onSuccess: () => {
+            const rest = { ...useFullScreenPlayerStore.getState().lidarrRestore };
+            delete rest[restoreKey!];
+            setStore({ lidarrRestore: rest });
+            refreshLidarr();
+        },
+    });
+
+    const request = (item: DiscographyItem) => {
+        if (!client || !lidarrArtist) return;
+        if (item.lidarrAlbum) {
+            requestMutation.mutate(item);
+            return;
+        }
+
+        // A release outside the artist's profile changes their Lidarr settings, so ask first
+        openModal({
+            children: (
+                <ConfirmModal
+                    labels={{
+                        cancel: t('common.cancel'),
+                        confirm: t('page.fullscreenPlayer.discography.get'),
+                    }}
+                    onConfirm={() => {
+                        closeAllModals();
+                        requestMutation.mutate(item);
+                    }}
+                >
+                    <Text>
+                        {t('page.fullscreenPlayer.discography.getConfirm', {
+                            artist: lidarrArtist.artistName,
+                            type: groupLabel(t, item.group),
+                        })}
+                    </Text>
+                </ConfirmModal>
+            ),
+            title: t('page.fullscreenPlayer.discography.getTitle', { title: item.title }),
+        });
+    };
+
+    const undoExtras = () => {
+        if (!restore || !lidarrArtist) return;
+        openModal({
+            children: (
+                <ConfirmModal
+                    labels={{
+                        cancel: t('common.cancel'),
+                        confirm: t('common.confirm'),
+                    }}
+                    onConfirm={() => {
+                        closeAllModals();
+                        restoreMutation.mutate();
+                    }}
+                >
+                    <Text>
+                        {t('page.fullscreenPlayer.discography.restoreConfirm', {
+                            artist: lidarrArtist.artistName,
+                            profile: restoreProfileName ?? '',
+                        })}
+                    </Text>
+                </ConfirmModal>
+            ),
+            title: t('page.fullscreenPlayer.discography.restoreTitle'),
+        });
+    };
 
     const playAlbum = (album: Album) =>
         player.addToQueueByFetch(serverId, [album.id], LibraryItem.ALBUM, Play.NOW);
@@ -338,7 +508,7 @@ export const useLidarrDiscography = () => {
         libraryQuery.isLoading || lidarrArtistsQuery.isLoading || lidarrAlbumsQuery.isLoading;
 
     let notice: null | string = null;
-    if (!isConfigured) notice = t('page.fullscreenPlayer.discography.connect');
+    if (!client) notice = t('page.fullscreenPlayer.discography.connect');
     else if (lidarrArtistsQuery.isError || lidarrAlbumsQuery.isError)
         notice = t('page.fullscreenPlayer.discography.lidarrError');
     else if (lidarrArtistsQuery.isSuccess && !lidarrArtist)
@@ -348,29 +518,36 @@ export const useLidarrDiscography = () => {
         currentAlbumId: song?.albumId,
         groups,
         isLoading,
+        isRestoring: restoreMutation.isPending,
         notice,
         owned,
         playAlbum,
-        request: (album: LidarrAlbum) => requestMutation.mutate(album),
+        request,
         requests,
+        // Set when Feishin moved this artist to a broader profile, to offer going back
+        restoreProfileName: restore ? restoreProfileName || '…' : undefined,
         total,
+        undoExtras,
     };
 };
 
-// Full screen player tab: the artist's releases from Lidarr, grouped by type,
-// with albums missing from the library greyed out and one click to request them.
+// Full screen player tab: the artist's releases grouped by type, with albums missing
+// from the library greyed out and one click to have Lidarr fetch them.
 export const LidarrDiscography = () => {
     const { t } = useTranslation();
     const {
         currentAlbumId,
         groups,
         isLoading,
+        isRestoring,
         notice,
         owned,
         playAlbum,
         request,
         requests,
+        restoreProfileName,
         total,
+        undoExtras,
     } = useLidarrDiscography();
 
     return (
@@ -381,6 +558,18 @@ export const LidarrDiscography = () => {
                         ? t('page.fullscreenPlayer.discography.loading')
                         : t('page.fullscreenPlayer.discography.summary', { owned, total })}
                 </span>
+                {restoreProfileName && (
+                    <button
+                        className={styles.restore}
+                        disabled={isRestoring}
+                        onClick={undoExtras}
+                        type="button"
+                    >
+                        {t('page.fullscreenPlayer.discography.restore', {
+                            profile: restoreProfileName,
+                        })}
+                    </button>
+                )}
             </div>
             {notice && <div className={styles.notice}>{notice}</div>}
             <div className={styles.scroll}>
@@ -407,11 +596,7 @@ export const LidarrDiscography = () => {
                                         key={item.key}
                                         onPlay={playAlbum}
                                         onRequest={request}
-                                        requestState={
-                                            item.lidarrAlbum
-                                                ? requests[item.lidarrAlbum.id]
-                                                : undefined
-                                        }
+                                        requestState={requests[item.key]}
                                     />
                                 ))}
                             </div>

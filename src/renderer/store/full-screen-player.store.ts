@@ -40,6 +40,9 @@ interface FullScreenPlayerState {
     fanartApiKey?: string;
     layout?: FullScreenPlayerLayout;
     lidarrApiKey?: string;
+    // Artists switched to a broader Lidarr profile by Feishin, keyed by `${lidarrUrl}|${artistId}`,
+    // with what to put back
+    lidarrRestore?: Record<string, { monitorNewItems?: string; profileId: number }>;
     lidarrUrl?: string;
     opacity: number;
     playerItemAlignment: FullScreenPlayerItemAlignment;

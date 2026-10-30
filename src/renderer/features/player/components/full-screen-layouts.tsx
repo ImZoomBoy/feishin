@@ -32,7 +32,7 @@ const isPanelTab = (activeTab: string, webAudio: boolean) =>
     ['discography', 'lyrics', 'queue', 'related'].includes(activeTab) ||
     (activeTab === 'visualizer' && webAudio);
 
-// Everything the layouts show about the current song
+// The little the layouts show about the current song: the photo and cover do the talking
 const useNowPlaying = () => {
     const song = usePlayerSong();
     const cover = useItemImageUrl({
@@ -42,22 +42,12 @@ const useNowPlaying = () => {
         type: 'fullScreenPlayer',
     });
 
-    const artist = song?.artists?.map((a) => a.name).join(', ') || song?.albumArtists?.[0]?.name;
-    const chips = [
-        song?.container?.toUpperCase(),
-        song?.bitRate ? `${song.bitRate} kbps` : undefined,
-        song?.sampleRate ? `${song.sampleRate / 1000} kHz` : undefined,
-        song?.genres?.[0]?.name,
-    ].filter(Boolean) as string[];
-
     return {
         album: song?.album || undefined,
-        artist,
-        chips,
+        artist: song?.artists?.map((a) => a.name).join(', ') || song?.albumArtists?.[0]?.name,
         cover,
-        song,
+        mainArtist: song?.artists?.[0]?.name || song?.albumArtists?.[0]?.name,
         title: song?.name,
-        track: song?.trackNumber || undefined,
         year: song?.releaseYear || undefined,
     };
 };
@@ -81,15 +71,6 @@ const Cover = ({ className, src }: { className?: string; src?: string }) => (
     </div>
 );
 
-const Chips = ({ chips }: { chips: string[] }) =>
-    chips.length ? (
-        <div className={styles.chips}>
-            {chips.map((chip) => (
-                <span key={chip}>{chip}</span>
-            ))}
-        </div>
-    ) : null;
-
 // Blurred cover behind everything, so a layout never shows a blank page
 // while artist photos load (or when an artist has none)
 const CoverWash = ({ src }: { src?: string }) =>
@@ -97,9 +78,22 @@ const CoverWash = ({ src }: { src?: string }) =>
 
 const joinDot = (...parts: (number | string | undefined)[]) => parts.filter(Boolean).join(' · ');
 
+// Title, then one quiet line with the artist and album
+const SongText = ({
+    className,
+    np,
+}: {
+    className?: string;
+    np: ReturnType<typeof useNowPlaying>;
+}) => (
+    <div className={clsx(styles.songText, className)}>
+        <h1>{np.title}</h1>
+        <div>{joinDot(np.artist, np.album)}</div>
+    </div>
+);
+
 // 1. Cinema: full bleed photo, the song set like a film title in the corner
 const CinemaLayout = () => {
-    const { t } = useTranslation();
     const np = useNowPlaying();
     return (
         <>
@@ -108,66 +102,24 @@ const CinemaLayout = () => {
             <div className={styles.cinemaShade} />
             <div className={styles.cinemaInfo}>
                 <Cover className={styles.cinemaCover} src={np.cover} />
-                <div className={styles.cinemaText}>
-                    <div className={styles.eyebrow}>
-                        {joinDot(
-                            t('page.fullscreenPlayer.layout.nowPlaying'),
-                            np.track &&
-                                t('page.fullscreenPlayer.layout.track', { number: np.track }),
-                        )}
-                    </div>
-                    <h1 className={styles.cinemaTitle}>{np.title}</h1>
-                    <div className={styles.cinemaArtist}>{np.artist}</div>
-                    <div className={styles.cinemaAlbum}>{joinDot(np.album, np.year)}</div>
-                    <Chips chips={np.chips} />
-                </div>
+                <SongText className={styles.cinemaText} np={np} />
             </div>
         </>
     );
 };
 
-// 2. Editorial: the photo as a framed print, cover and details beside it
+// 2. Editorial: the photo as a framed print, the cover beside it
 const EditorialLayout = () => {
-    const { t } = useTranslation();
     const np = useNowPlaying();
-    const info = useArtistInfo();
-    const facts = [
-        [t('page.fullscreenPlayer.layout.format'), joinDot(np.chips[0], np.chips[1])],
-        [t('page.fullscreenPlayer.layout.genre'), np.song?.genres?.[0]?.name || info.genre],
-        [t('page.fullscreenPlayer.layout.year'), np.year],
-    ].filter(([, value]) => value);
-
     return (
         <>
             <div className={styles.editorialGlow} />
             <div className={styles.editorialPhoto}>
                 <ArtistBackdrop className={styles.photo} />
-                <div className={styles.editorialCaption}>
-                    <b>{np.artist}</b>
-                    {info.country && <span>{info.country}</span>}
-                </div>
             </div>
             <div className={styles.editorialMeta}>
                 <Cover className={styles.editorialCover} src={np.cover} />
-                <div className={styles.kicker}>{t('page.fullscreenPlayer.layout.nowPlaying')}</div>
-                <h1 className={styles.editorialTitle}>{np.title}</h1>
-                <div className={styles.editorialArtist}>{np.artist}</div>
-                <div className={styles.editorialAlbum}>
-                    {joinDot(
-                        np.album,
-                        np.track && t('page.fullscreenPlayer.layout.track', { number: np.track }),
-                    )}
-                </div>
-                {facts.length > 0 && (
-                    <div className={styles.facts}>
-                        {facts.map(([label, value]) => (
-                            <div key={label as string}>
-                                {label}
-                                <b>{value}</b>
-                            </div>
-                        ))}
-                    </div>
-                )}
+                <SongText className={styles.editorialText} np={np} />
             </div>
         </>
     );
@@ -185,15 +137,13 @@ const RefinedLayout = () => {
             {info.logo && <img alt="" className={styles.refinedLogo} src={info.logo} />}
             <div className={styles.refinedColumn}>
                 <Cover className={styles.refinedCover} src={np.cover} />
-                <h1 className={styles.refinedTitle}>{np.title}</h1>
-                <div className={styles.refinedArtist}>{np.artist}</div>
-                <div className={styles.refinedAlbum}>{joinDot(np.album, np.year)}</div>
+                <SongText className={styles.refinedText} np={np} />
             </div>
         </>
     );
 };
 
-// 4. Poster: duotone photo tinted by the cover, big type and a spinning record
+// 4. Poster: duotone photo tinted by the cover, the artist's name as a graphic and a spinning record
 const PosterLayout = () => {
     const np = useNowPlaying();
     const { background } = useFastAverageColor({
@@ -201,16 +151,13 @@ const PosterLayout = () => {
         src: np.cover,
         srcLoaded: true,
     });
-    const number = [np.track && String(np.track).padStart(2, '0'), np.year]
-        .filter(Boolean)
-        .join('  —  ');
 
     return (
         <>
             <ArtistBackdrop className={clsx(styles.photo, styles.posterPhoto)} />
             <div className={styles.posterTint} style={{ background: background || undefined }} />
             <div className={styles.posterFade} />
-            <div className={styles.posterWord}>{np.song?.artists?.[0]?.name || np.artist}</div>
+            <div className={styles.posterWord}>{np.mainArtist}</div>
             <div className={styles.posterWrap}>
                 <div className={styles.posterDisc}>
                     <div className={styles.vinyl}>
@@ -224,10 +171,8 @@ const PosterLayout = () => {
                     <Cover className={styles.posterCover} src={np.cover} />
                 </div>
                 <div className={styles.posterText}>
-                    {number && <div className={styles.posterNumber}>{number}</div>}
                     <h1 className={styles.posterTitle}>{np.title}</h1>
                     <div className={styles.posterArtist}>{np.artist}</div>
-                    <div className={styles.posterAlbum}>{np.album}</div>
                 </div>
             </div>
         </>
@@ -237,17 +182,7 @@ const PosterLayout = () => {
 const DiscographyStrip = () => {
     const { t } = useTranslation();
     const { setStore } = useFullScreenPlayerStoreActions();
-    const {
-        currentAlbumId,
-        groups,
-        isLoading,
-        notice,
-        owned,
-        playAlbum,
-        request,
-        requests,
-        total,
-    } = useLidarrDiscography();
+    const { currentAlbumId, groups, notice, playAlbum, request, requests } = useLidarrDiscography();
     const [picked, setPicked] = useState<GroupKey>();
 
     // Open on the group holding the album that's playing
@@ -260,9 +195,6 @@ const DiscographyStrip = () => {
     return (
         <div className={styles.disco}>
             <div className={styles.discoHead}>
-                <span className={styles.discoLabel}>
-                    {t('page.fullscreenPlayer.discography.tab')}
-                </span>
                 <div className={styles.discoTabs}>
                     {groups.map((group) => (
                         <button
@@ -279,11 +211,6 @@ const DiscographyStrip = () => {
                         </button>
                     ))}
                 </div>
-                <span className={styles.discoSummary}>
-                    {isLoading
-                        ? t('page.fullscreenPlayer.discography.loading')
-                        : t('page.fullscreenPlayer.discography.summary', { owned, total })}
-                </span>
                 <button
                     className={styles.discoAll}
                     onClick={() => setStore({ activeTab: 'discography' })}
@@ -309,9 +236,7 @@ const DiscographyStrip = () => {
                             item={item}
                             onPlay={playAlbum}
                             onRequest={request}
-                            requestState={
-                                item.lidarrAlbum ? requests[item.lidarrAlbum.id] : undefined
-                            }
+                            requestState={requests[item.key]}
                         />
                     </div>
                 ))}
@@ -322,15 +247,8 @@ const DiscographyStrip = () => {
 
 // 5. Artist stage: the artist is the page, with their discography along the bottom
 const StageLayout = () => {
-    const { t } = useTranslation();
     const np = useNowPlaying();
     const info = useArtistInfo();
-    const about = [
-        [t('page.fullscreenPlayer.layout.formed'), info.formed],
-        [t('page.fullscreenPlayer.layout.origin'), info.country],
-        [t('page.fullscreenPlayer.layout.genre'), info.genre],
-    ].filter(([, value]) => value);
-
     return (
         <>
             <div className={styles.stageHero}>
@@ -338,29 +256,10 @@ const StageLayout = () => {
                 <ArtistBackdrop className={styles.photo} position="center 30%" />
                 <div className={styles.stageShade} />
             </div>
-            <div className={styles.stageTop}>
-                {info.logo ? (
-                    <img alt={np.artist} className={styles.stageLogo} src={info.logo} />
-                ) : (
-                    <div className={styles.stageName}>{np.artist}</div>
-                )}
-                {about.length > 0 && (
-                    <div className={styles.stageAbout}>
-                        {about.map(([label, value]) => (
-                            <span key={label as string}>
-                                {label} <b>{value}</b>
-                            </span>
-                        ))}
-                    </div>
-                )}
-            </div>
+            {info.logo && <img alt={np.artist} className={styles.stageLogo} src={info.logo} />}
             <div className={styles.stageNow}>
                 <Cover className={styles.stageCover} src={np.cover} />
-                <div className={styles.stageText}>
-                    <h1 className={styles.stageTitle}>{np.title}</h1>
-                    <div className={styles.stageSub}>{joinDot(np.artist, np.album, np.year)}</div>
-                    <Chips chips={np.chips.slice(0, 3)} />
-                </div>
+                <SongText className={styles.stageText} np={np} />
             </div>
             <DiscographyStrip />
         </>

@@ -586,10 +586,15 @@
         },
         "fullscreenPlayer": {
             "discography": {
+                "adding": "Adding…",
                 "connect": "Add your Lidarr address and API key in the player settings (gear icon) to see missing albums and request them.",
                 "failed": "Failed, retry",
+                "get": "Get",
+                "getConfirm": "{{artist}}'s Lidarr profile leaves out {{type}}. Feishin will switch them to a profile that includes them. Their other {{type}} will be added to Lidarr but not downloaded. Only this one will be downloaded.",
+                "getTitle": "Get “{{title}}”?",
                 "group": {
                     "compilation": "Remixes & compilations",
+                    "demo": "Demos",
                     "ep": "EPs",
                     "library": "Also in your library",
                     "live": "Live",
@@ -602,11 +607,26 @@
                 "loading": "Loading discography…",
                 "missing": "Missing",
                 "notInLidarr": "{{artist}} isn't in Lidarr, so only albums in your library are shown.",
+                "notTracked": "Not in Lidarr",
                 "playing": "Playing",
                 "request": "+ Lidarr",
+                "restore": "Back to {{profile}}",
+                "restoreConfirm": "{{artist}} goes back to “{{profile}}”. Lidarr will drop the extra releases it has no files for. Anything already downloaded stays.",
+                "restoreTitle": "Go back to the original Lidarr profile?",
                 "searching": "Searching…",
                 "summary": "{{owned}} of {{total}} releases in your library",
                 "tab": "Discography",
+                "typePlural": {
+                    "compilation": "remixes and compilations",
+                    "demo": "demos",
+                    "ep": "EPs",
+                    "library": "releases",
+                    "live": "live albums",
+                    "other": "other releases",
+                    "single": "singles",
+                    "soundtrack": "soundtracks",
+                    "studio": "studio albums"
+                },
                 "wanted": "Wanted"
             },
             "config": {
@@ -668,17 +688,10 @@
                 "cinema": "Cinema",
                 "classic": "Original",
                 "editorial": "Editorial",
-                "format": "Format",
-                "formed": "Formed",
-                "genre": "Genre",
-                "nowPlaying": "Now playing",
-                "origin": "Origin",
                 "poster": "Poster",
                 "refined": "Classic, refined",
                 "seeAll": "See all",
-                "stage": "Artist stage",
-                "track": "Track {{number}}",
-                "year": "Year"
+                "stage": "Artist stage"
             }
         },
         "genreList": {
