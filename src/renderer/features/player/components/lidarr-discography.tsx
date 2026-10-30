@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import clsx from 'clsx';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { generatePath, useNavigate } from 'react-router';
 
 import styles from './lidarr-discography.module.css';
 
@@ -22,6 +23,7 @@ import {
     searchAlbum,
 } from '/@/renderer/features/player/api/lidarr-api';
 import { usePlayer } from '/@/renderer/features/player/context/player-context';
+import { AppRoute } from '/@/renderer/router/routes';
 import {
     useCurrentServerId,
     useFullScreenPlayerStore,
@@ -133,6 +135,7 @@ export const DiscographyTile = ({
     requestState?: RequestState;
 }) => {
     const { t } = useTranslation();
+    const navigate = useNavigate();
     const libraryCover = useItemImageUrl({
         id: item.libraryAlbum?.imageId || undefined,
         itemType: LibraryItem.ALBUM,
@@ -173,7 +176,15 @@ export const DiscographyTile = ({
                 [styles.outside]: outsideLidarr,
                 [styles.playing]: isPlaying,
             })}
-            onClick={() => item.libraryAlbum && onPlay(item.libraryAlbum)}
+            // Opening the album page also closes the full screen player
+            onClick={() =>
+                item.libraryAlbum &&
+                navigate(
+                    generatePath(AppRoute.LIBRARY_ALBUMS_DETAIL, {
+                        albumId: item.libraryAlbum.id,
+                    }),
+                )
+            }
             title={item.title}
         >
             <div className={styles.art}>
@@ -183,7 +194,15 @@ export const DiscographyTile = ({
                     <div className={styles.blank} />
                 )}
                 {owned ? (
-                    <span className={styles.playButton} />
+                    <button
+                        aria-label={t('player.play', { postProcess: 'sentenceCase' })}
+                        className={styles.playButton}
+                        onClick={(event) => {
+                            event.stopPropagation();
+                            if (item.libraryAlbum) onPlay(item.libraryAlbum);
+                        }}
+                        type="button"
+                    />
                 ) : (
                     <>
                         <span className={styles.tag}>{tag}</span>

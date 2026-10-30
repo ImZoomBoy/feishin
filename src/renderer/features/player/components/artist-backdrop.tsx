@@ -99,16 +99,25 @@ const useSongArtists = () => {
     }, [song?.artists, song?.albumArtists]);
 };
 
-// Logo and facts (formed, country, genre) for the current song's main artist
-export const useArtistInfo = (): ArtistInfo => {
+// Logo and facts (formed, country, genre) for an artist
+export const useArtistInfoFor = (name?: string): ArtistInfo => {
     const fanartApiKey = useFullScreenPlayerStore((state) => state.fanartApiKey)?.trim();
-    const primary = useSongArtists()[0];
     const { data } = useQuery({
-        ...artistPhotosQuery(primary?.name ?? '', fanartApiKey),
-        enabled: Boolean(primary?.name),
+        ...artistPhotosQuery(name ?? '', fanartApiKey),
+        enabled: Boolean(name),
     });
     return data?.info ?? {};
 };
+
+// The same, for the current song's main artist
+export const useArtistInfo = (): ArtistInfo => useArtistInfoFor(useSongArtists()[0]?.name);
+
+export interface BackdropArtist {
+    id: string;
+    imageId?: null | string;
+    imageUrl?: null | string;
+    name: string;
+}
 
 const preload = (url: string) =>
     new Promise<void>((resolve) => {
@@ -118,17 +127,20 @@ const preload = (url: string) =>
         img.src = url;
     });
 
-// Full screen player background that rotates through photos of the current song's artist.
-// Falls back to the artist image from the music server.
+// Background that rotates through photos of the given artists (by default the current
+// song's). Falls back to the artist image from the music server.
 export const ArtistBackdrop = ({
+    artists: artistsProp,
     className,
     position = 'center 25%',
 }: {
+    artists?: BackdropArtist[];
     className: string;
     position?: string;
 }) => {
     const fanartApiKey = useFullScreenPlayerStore((state) => state.fanartApiKey)?.trim();
-    const artists = useSongArtists();
+    const songArtists = useSongArtists();
+    const artists = artistsProp ?? songArtists;
 
     const primary = artists[0];
 

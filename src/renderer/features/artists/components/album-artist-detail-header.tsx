@@ -11,6 +11,7 @@ import { getArtistAlbumsGrouped } from '/@/renderer/features/artists/hooks/use-a
 import { useDeleteArtistImage } from '/@/renderer/features/artists/mutations/delete-artist-image-mutation';
 import { useUploadArtistImage } from '/@/renderer/features/artists/mutations/upload-artist-image-mutation';
 import { ContextMenuController } from '/@/renderer/features/context-menu/context-menu-controller';
+import { useArtistInfoFor } from '/@/renderer/features/player/components/artist-backdrop';
 import { usePlayer } from '/@/renderer/features/player/context/player-context';
 import {
     LibraryHeader,
@@ -119,6 +120,7 @@ export const AlbumArtistDetailHeader = forwardRef<HTMLDivElement, AlbumArtistDet
         const songCount = detailQuery.data?.songCount;
         const duration = detailQuery.data?.duration;
         const durationEnabled = duration !== null && duration !== undefined;
+        const info = useArtistInfoFor(detailQuery.data?.name);
 
         const metadataItems = [
             {
@@ -138,6 +140,19 @@ export const AlbumArtistDetailHeader = forwardRef<HTMLDivElement, AlbumArtistDet
                 id: 'duration',
                 secondary: true,
                 value: durationEnabled && formatDurationString(duration),
+            },
+            // From TheAudioDB, when it knows the artist
+            {
+                enabled: Boolean(info.genre),
+                id: 'genre',
+                secondary: true,
+                value: info.genre,
+            },
+            {
+                enabled: Boolean(info.formed || info.country),
+                id: 'origin',
+                secondary: true,
+                value: [info.formed, info.country].filter(Boolean).join(', '),
             },
         ];
 
@@ -278,6 +293,7 @@ export const AlbumArtistDetailHeader = forwardRef<HTMLDivElement, AlbumArtistDet
 
         return (
             <LibraryHeader
+                containerClassName={styles.header}
                 imageOverlay={
                     <ArtistImageUploadOverlay
                         data={detailQuery.data}
@@ -296,6 +312,15 @@ export const AlbumArtistDetailHeader = forwardRef<HTMLDivElement, AlbumArtistDet
                 onImageFileDrop={canUploadArtistImage ? handleArtistImageUpload : undefined}
                 ref={ref}
                 title={detailQuery.data?.name || ''}
+                titleNode={
+                    info.logo ? (
+                        <img
+                            alt={detailQuery.data?.name || ''}
+                            className={styles.logo}
+                            src={info.logo}
+                        />
+                    ) : undefined
+                }
             >
                 <Stack gap="md" w="100%">
                     <Group className={styles.metadataGroup}>

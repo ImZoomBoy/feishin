@@ -9,16 +9,13 @@ import { albumQueries } from '/@/renderer/features/albums/api/album-api';
 import { artistsQueries } from '/@/renderer/features/artists/api/artists-api';
 import { AlbumArtistDetailContent } from '/@/renderer/features/artists/components/album-artist-detail-content';
 import { AlbumArtistDetailHeader } from '/@/renderer/features/artists/components/album-artist-detail-header';
+import { ArtistHero } from '/@/renderer/features/artists/components/artist-hero';
 import { AnimatedPage } from '/@/renderer/features/shared/components/animated-page';
-import {
-    LibraryBackgroundImage,
-    LibraryBackgroundOverlay,
-} from '/@/renderer/features/shared/components/library-background-overlay';
 import { LibraryContainer } from '/@/renderer/features/shared/components/library-container';
 import { LibraryHeaderBar } from '/@/renderer/features/shared/components/library-header-bar';
 import { PageErrorBoundary } from '/@/renderer/features/shared/components/page-error-boundary';
 import { useFastAverageColor } from '/@/renderer/hooks';
-import { useArtistBackground, useCurrentServer, useCurrentServerId } from '/@/renderer/store';
+import { useCurrentServer, useCurrentServerId } from '/@/renderer/store';
 import { Spinner } from '/@/shared/components/spinner/spinner';
 import { AlbumListSort, LibraryItem, SortOrder } from '/@/shared/types/domain-types';
 
@@ -27,7 +24,6 @@ const AlbumArtistDetailRouteContent = () => {
     const headerRef = useRef<HTMLDivElement>(null);
     const server = useCurrentServer();
     const serverId = useCurrentServerId();
-    const { artistBackground, artistBackgroundBlur } = useArtistBackground();
 
     useNativeScrollPersist({ enabled: true, scrollRef: scrollAreaRef });
 
@@ -61,13 +57,6 @@ const AlbumArtistDetailRouteContent = () => {
         type: 'header',
     });
 
-    const libraryBackgroundImageUrl = useItemImageUrl({
-        id: detailQuery.data?.imageId || undefined,
-        imageUrl: detailQuery.data?.imageUrl,
-        itemType: LibraryItem.ALBUM_ARTIST,
-        type: 'itemCard',
-    });
-
     const selectedImageUrl = imageUrl || detailQuery.data?.imageUrl;
 
     const { background: backgroundColor } = useFastAverageColor({
@@ -75,10 +64,6 @@ const AlbumArtistDetailRouteContent = () => {
         src: selectedImageUrl,
         srcLoaded: true,
     });
-
-    const background = backgroundColor;
-
-    const showBlurredImage = artistBackground;
 
     // if (isColorLoading) {
     //     return <Spinner container />;
@@ -106,15 +91,19 @@ const AlbumArtistDetailRouteContent = () => {
                 }}
                 ref={scrollAreaRef}
             >
-                {showBlurredImage ? (
-                    <LibraryBackgroundImage
-                        blur={artistBackgroundBlur}
-                        headerRef={headerRef}
-                        imageUrl={libraryBackgroundImageUrl || ''}
-                    />
-                ) : (
-                    <LibraryBackgroundOverlay backgroundColor={background} headerRef={headerRef} />
-                )}
+                <ArtistHero
+                    artist={
+                        detailQuery.data
+                            ? {
+                                  id: detailQuery.data.id,
+                                  imageId: detailQuery.data.imageId,
+                                  imageUrl: detailQuery.data.imageUrl,
+                                  name: detailQuery.data.name,
+                              }
+                            : undefined
+                    }
+                    color={backgroundColor || undefined}
+                />
                 <LibraryContainer>
                     <AlbumArtistDetailHeader
                         albumsQuery={albumsQuery}

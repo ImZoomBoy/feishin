@@ -134,12 +134,21 @@
     bottom: 6px;
     display: grid;
     place-items: center;
-    width: 28px;
-    height: 28px;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    cursor: pointer;
     background: var(--theme-colors-primary);
+    border: none;
     border-radius: 50%;
     opacity: 0;
-    transition: opacity 0.15s;
+    transition:
+        opacity 0.15s,
+        transform 0.15s;
+
+    &:hover {
+        transform: scale(1.12);
+    }
 
     &::before {
         margin-left: 2px;
