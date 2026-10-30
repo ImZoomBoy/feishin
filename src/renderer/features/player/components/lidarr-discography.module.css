@@ -241,3 +241,38 @@
         opacity: 0.4;
     }
 }
+
+/* Bigger tiles for the artist discography page */
+.large {
+    .art {
+        border-radius: 8px;
+    }
+
+    .title {
+        margin-top: 0.6rem;
+        font-size: 0.95rem;
+    }
+
+    .year {
+        font-size: 0.82rem;
+    }
+
+    .tag {
+        top: 8px;
+        left: 8px;
+        font-size: 0.68rem;
+    }
+
+    .request {
+        inset: auto 10px 10px;
+        padding: 9px 0;
+        font-size: 0.82rem;
+    }
+
+    .play-button {
+        right: 10px;
+        bottom: 10px;
+        width: 44px;
+        height: 44px;
+    }
+}

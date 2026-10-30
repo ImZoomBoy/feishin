@@ -128,12 +128,14 @@ export const DiscographyTile = ({
     onPlay,
     onRequest,
     requestState,
+    size = 'small',
 }: {
     isPlaying: boolean;
     item: DiscographyItem;
     onPlay: (album: Album) => void;
     onRequest: (item: DiscographyItem) => void;
     requestState?: RequestState;
+    size?: 'large' | 'small';
 }) => {
     const { t } = useTranslation();
     const navigate = useNavigate();
@@ -173,6 +175,7 @@ export const DiscographyTile = ({
     return (
         <div
             className={clsx(styles.tile, {
+                [styles.large]: size === 'large',
                 [styles.missing]: !owned,
                 [styles.outside]: outsideLidarr,
                 [styles.playing]: isPlaying,
@@ -235,9 +238,10 @@ export const DiscographyTile = ({
 const groupLabel = (t: (key: string) => string, key: GroupKey) =>
     t(`page.fullscreenPlayer.discography.typePlural.${key}`);
 
-// The current artist's releases from Lidarr and MusicBrainz, grouped by type and matched
-// against the library, plus actions to play an owned album or have Lidarr fetch one.
-export const useLidarrDiscography = () => {
+// An artist's releases from Lidarr and MusicBrainz, grouped by type and matched against
+// the library, plus actions to play an owned album or have Lidarr fetch one.
+// Defaults to the current song's artist.
+export const useLidarrDiscography = (artistOverride?: { id: string; name: string }) => {
     const { t } = useTranslation();
     const song = usePlayerSong();
     const serverId = useCurrentServerId();
@@ -252,6 +256,7 @@ export const useLidarrDiscography = () => {
     const [requests, setRequests] = useState<Record<string, RequestState>>({});
 
     const artist =
+        artistOverride ??
         song?.albumArtists?.find((a) => normalize(a.name) !== 'variousartists') ??
         song?.artists?.[0];
 

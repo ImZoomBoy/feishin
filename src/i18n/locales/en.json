@@ -497,7 +497,9 @@
             "topSongsPersonal": "Personal",
             "favoriteSongsFrom": "Favorite songs from {{title}}",
             "viewAll": "View all",
-            "viewAllTracks": "View all $t(entity.track, {\"count\": 2})"
+            "viewAllTracks": "View all $t(entity.track, {\"count\": 2})",
+            "albumList": "Album list",
+            "fullDiscography": "Full discography"
         },
         "albumArtistList": {
             "title": "$t(entity.albumArtist, {\"count\": 2})"
