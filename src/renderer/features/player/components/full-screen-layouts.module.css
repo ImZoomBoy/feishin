@@ -359,7 +359,7 @@
 }
 
 .poster-wrap {
-    --disc: min(56cqh, 30cqw);
+    --disc: min(60cqh, 34cqw);
 
     position: absolute;
     top: calc(52cqh - var(--disc) / 2);
@@ -383,55 +383,17 @@
     height: var(--disc);
 }
 
-.vinyl {
-    position: absolute;
-    top: 3%;
-    left: 42%;
-    width: 94%;
-    height: 94%;
-    background:
-        conic-gradient(
-            from 30deg,
-            transparent 0deg,
-            rgb(255 255 255 / 16%) 30deg,
-            transparent 70deg,
-            transparent 180deg,
-            rgb(255 255 255 / 12%) 215deg,
-            transparent 250deg
-        ),
-        repeating-radial-gradient(circle, #101010 0 1.5px, #1e1e1e 1.5px 3px);
-    border-radius: 50%;
-    box-shadow:
-        0 20px 50px rgb(0 0 0 / 60%),
-        inset 0 0 0 1px rgb(255 255 255 / 10%);
-    animation: spin 6s linear infinite;
-}
-
-.vinyl-label {
-    position: absolute;
-    inset: 34%;
-    background-position: center;
-    background-size: cover;
-    border-radius: 50%;
-    box-shadow: 0 0 0 3px #0b0b0b;
-}
-
-@keyframes spin {
-    to {
-        transform: rotate(360deg);
-    }
-}
-
 .poster-cover {
     position: absolute;
     inset: 0;
     border-radius: 2px;
+    box-shadow: 0 24px 60px rgb(0 0 0 / 55%);
 }
 
 .poster-text {
     flex: 1;
     min-width: 0;
-    margin-left: calc(var(--disc) * 0.42 + 3.5cqw);
+    margin-left: 3.5cqw;
     text-shadow: 0 2px 24px rgb(0 0 0 / 40%);
 }
 

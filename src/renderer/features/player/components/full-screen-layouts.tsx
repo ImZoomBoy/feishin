@@ -143,7 +143,7 @@ const RefinedLayout = () => {
     );
 };
 
-// 4. Poster: duotone photo tinted by the cover, the artist's name as a graphic and a spinning record
+// 4. Poster: duotone photo tinted by the cover, with the artist's name as a graphic
 const PosterLayout = () => {
     const np = useNowPlaying();
     const { background } = useFastAverageColor({
@@ -160,14 +160,6 @@ const PosterLayout = () => {
             <div className={styles.posterWord}>{np.mainArtist}</div>
             <div className={styles.posterWrap}>
                 <div className={styles.posterDisc}>
-                    <div className={styles.vinyl}>
-                        {np.cover && (
-                            <div
-                                className={styles.vinylLabel}
-                                style={{ backgroundImage: `url("${np.cover}")` }}
-                            />
-                        )}
-                    </div>
                     <Cover className={styles.posterCover} src={np.cover} />
                 </div>
                 <div className={styles.posterText}>
