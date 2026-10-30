@@ -18,6 +18,7 @@ import { useItemImageUrl } from '/@/renderer/components/item-image/item-image';
 import { ContextMenuController } from '/@/renderer/features/context-menu/context-menu-controller';
 import { Lyrics } from '/@/renderer/features/lyrics/lyrics';
 import { PlayQueue } from '/@/renderer/features/now-playing/components/play-queue';
+import { ArtistBackdrop } from '/@/renderer/features/player/components/artist-backdrop';
 import { MobileFullscreenPlayerAlbumArt } from '/@/renderer/features/player/components/mobile-fullscreen-player-album-art';
 import { MobileFullscreenPlayerBottomControls } from '/@/renderer/features/player/components/mobile-fullscreen-player-bottom-controls';
 import { MobileFullscreenPlayerControls } from '/@/renderer/features/player/components/mobile-fullscreen-player-controls';
@@ -80,6 +81,7 @@ interface BackgroundImageProps {
 const BackgroundImage = memo(({ dynamicBackground, dynamicIsImage }: BackgroundImageProps) => {
     const currentSong = usePlayerSong();
     const { nextSong } = usePlayerData();
+    const dynamicImageSource = useFullScreenPlayerStore((state) => state.dynamicImageSource);
 
     const currentImageUrl = useItemImageUrl({
         id: currentSong?.imageId || undefined,
@@ -125,6 +127,10 @@ const BackgroundImage = memo(({ dynamicBackground, dynamicIsImage }: BackgroundI
 
     if (!dynamicBackground || !dynamicIsImage) {
         return null;
+    }
+
+    if (dynamicImageSource === 'artist') {
+        return <ArtistBackdrop className={styles.backgroundImage} />;
     }
 
     const getBackgroundImageUrl = (

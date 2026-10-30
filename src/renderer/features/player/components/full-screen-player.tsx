@@ -14,6 +14,11 @@ import { useLocation } from 'react-router';
 import styles from './full-screen-player.module.css';
 
 import { useItemImageUrl } from '/@/renderer/components/item-image/item-image';
+import { ArtistBackdrop } from '/@/renderer/features/player/components/artist-backdrop';
+import {
+    FullScreenLayoutSwitcher,
+    FullScreenLayoutView,
+} from '/@/renderer/features/player/components/full-screen-layouts';
 import { FullScreenPlayerImage } from '/@/renderer/features/player/components/full-screen-player-image';
 import {
     FullScreenPlayerControls,
@@ -67,6 +72,7 @@ interface BackgroundImageProps {
 const BackgroundImage = memo(({ dynamicBackground, dynamicIsImage }: BackgroundImageProps) => {
     const currentSong = usePlayerSong();
     const { nextSong } = usePlayerData();
+    const dynamicImageSource = useFullScreenPlayerStore((state) => state.dynamicImageSource);
 
     const currentImageUrl = useItemImageUrl({
         id: currentSong?.imageId || undefined,
@@ -113,6 +119,10 @@ const BackgroundImage = memo(({ dynamicBackground, dynamicIsImage }: BackgroundI
 
     if (!dynamicBackground || !dynamicIsImage) {
         return null;
+    }
+
+    if (dynamicImageSource === 'artist') {
+        return <ArtistBackdrop className={styles.backgroundImage} />;
     }
 
     const getBackgroundImageUrl = (
@@ -310,20 +320,23 @@ const PlayerContainer = memo(
 PlayerContainer.displayName = 'PlayerContainer';
 
 export const FullScreenPlayer = () => {
-    const { activeTab, dynamicBackground, dynamicImageBlur, dynamicIsImage, opacity } =
+    const { activeTab, dynamicBackground, dynamicImageBlur, dynamicIsImage, layout, opacity } =
         useFullScreenPlayerStore();
+    const altLayout = layout && layout !== 'classic' ? layout : undefined;
     const { setStore } = useFullScreenPlayerStoreActions();
     const hasActiveModule =
         activeTab === 'queue' ||
         activeTab === 'related' ||
         activeTab === 'lyrics' ||
+        activeTab === 'discography' ||
         activeTab === 'visualizer';
 
     const isRadioActive = useIsRadioActive();
     const { isPlaying: isRadioPlaying } = useRadioPlayer();
 
     const isPlayingRadio = isRadioActive && isRadioPlaying;
-    const effectiveDynamicBackground = dynamicBackground && !isPlayingRadio;
+    // The other layouts draw their own backgrounds
+    const effectiveDynamicBackground = dynamicBackground && !isPlayingRadio && !altLayout;
 
     const location = useLocation();
     const isOpenedRef = useRef<boolean | null>(null);
@@ -355,20 +368,27 @@ export const FullScreenPlayer = () => {
             >
                 <SharedFullscreenPlayerSettings />
             </Group>
-            <BackgroundImageOverlay
-                dynamicBackground={effectiveDynamicBackground}
-                dynamicImageBlur={dynamicImageBlur}
-            />
-            <div className={styles.responsiveContainer}>
-                <div
-                    className={clsx(styles.imageColumn, {
-                        [styles.imageColumnFull]: !hasActiveModule,
-                    })}
-                >
-                    <FullScreenPlayerImage />
-                </div>
-                <FullScreenPlayerQueue />
-            </div>
+            <FullScreenLayoutSwitcher />
+            {altLayout ? (
+                <FullScreenLayoutView layout={altLayout} />
+            ) : (
+                <>
+                    <BackgroundImageOverlay
+                        dynamicBackground={effectiveDynamicBackground}
+                        dynamicImageBlur={dynamicImageBlur}
+                    />
+                    <div className={styles.responsiveContainer}>
+                        <div
+                            className={clsx(styles.imageColumn, {
+                                [styles.imageColumnFull]: !hasActiveModule,
+                            })}
+                        >
+                            <FullScreenPlayerImage />
+                        </div>
+                        <FullScreenPlayerQueue />
+                    </div>
+                </>
+            )}
             <FullScreenPlayerControls />
         </PlayerContainer>
     );

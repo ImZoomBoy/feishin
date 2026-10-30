@@ -5,7 +5,21 @@ import { immer } from 'zustand/middleware/immer';
 import { shallow } from 'zustand/shallow';
 import { createWithEqualityFn } from 'zustand/traditional';
 
+export type FullScreenPlayerImageSource = 'album' | 'artist';
+
+// Artist photo led layouts, then 'classic' (Feishin's original layout). The order sets the hotkeys.
+export const FULL_SCREEN_LAYOUTS = [
+    'cinema',
+    'editorial',
+    'refined',
+    'poster',
+    'stage',
+    'classic',
+] as const;
+
 export type FullScreenPlayerItemAlignment = 'center' | 'left' | 'right';
+
+export type FullScreenPlayerLayout = (typeof FULL_SCREEN_LAYOUTS)[number];
 
 export interface FullScreenPlayerSlice extends FullScreenPlayerState {
     actions: {
@@ -20,8 +34,16 @@ interface FullScreenPlayerState {
     coverArtSize: number;
     dynamicBackground?: boolean;
     dynamicImageBlur: number;
+    dynamicImageSource?: FullScreenPlayerImageSource;
     dynamicIsImage?: boolean;
     expanded: boolean;
+    fanartApiKey?: string;
+    layout?: FullScreenPlayerLayout;
+    lidarrApiKey?: string;
+    // Artists switched to a broader Lidarr profile by Feishin, keyed by `${lidarrUrl}|${artistId}`,
+    // with what to put back
+    lidarrRestore?: Record<string, { monitorNewItems?: string; profileId: number }>;
+    lidarrUrl?: string;
     opacity: number;
     playerItemAlignment: FullScreenPlayerItemAlignment;
     titleDisplayType: FullScreenPlayerTitleDisplayType;
@@ -44,8 +66,10 @@ export const useFullScreenPlayerStore = createWithEqualityFn<FullScreenPlayerSli
                 coverArtSize: 75,
                 dynamicBackground: true,
                 dynamicImageBlur: 6,
+                dynamicImageSource: 'album',
                 dynamicIsImage: false,
                 expanded: false,
+                layout: 'classic',
                 opacity: 25,
                 playerItemAlignment: 'center',
                 titleDisplayType: 'scroll',
@@ -95,6 +119,14 @@ export const useFullScreenPlayerStoreActions = () =>
 
 export const useSetFullScreenPlayerStore = () =>
     useFullScreenPlayerStore((state) => state.actions.setStore);
+
+// The artist photo background takes over the page, so the cover moves out of the way
+export const useIsArtistBackdropMode = () =>
+    useFullScreenPlayerStore(
+        (state) =>
+            Boolean(state.dynamicBackground && state.dynamicIsImage) &&
+            state.dynamicImageSource === 'artist',
+    );
 
 export const useFullScreenPlayerOverlayState = () =>
     useFullScreenPlayerStore(

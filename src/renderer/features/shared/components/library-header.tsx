@@ -55,6 +55,8 @@ interface LibraryHeaderProps {
     loading?: boolean;
     onImageFileDrop?: (file: File) => Promise<void> | void;
     title: string;
+    // Shown in place of the title text, e.g. an artist's logo
+    titleNode?: ReactNode;
     topRight?: ReactNode;
 }
 
@@ -69,6 +71,7 @@ export const LibraryHeader = forwardRef(
             item,
             onImageFileDrop,
             title,
+            titleNode,
             topRight,
         }: LibraryHeaderProps,
         ref: Ref<HTMLDivElement>,
@@ -252,7 +255,7 @@ export const LibraryHeader = forwardRef(
                                 fontSize: calculateTitleSize(title),
                             }}
                         >
-                            {title}
+                            {titleNode ?? title}
                         </h1>
                         {children}
                     </div>
