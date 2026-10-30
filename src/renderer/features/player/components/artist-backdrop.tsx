@@ -156,16 +156,19 @@ export const ArtistBackdrop = ({
     });
 
     const photoKey = results.map((r) => r.dataUpdatedAt).join();
+    const loading = results.some((r) => r.isLoading);
 
     const images = useMemo(() => {
         const sets = results.map((r) => r.data).filter(Boolean) as ArtistPhotos[];
         // Prefer the main artist, but add other artists' photos for variety
         const backdrops = sets.flatMap((set) => set.backdrops);
         if (backdrops.length) return [...new Set(backdrops)];
+        // Wait for the photos rather than flash a stand-in that's swapped out moments later
+        if (loading) return [];
         if (serverImageUrl) return [serverImageUrl];
         return [...new Set(sets.flatMap((set) => set.fallbacks))].slice(0, 1);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [photoKey, serverImageUrl]);
+    }, [loading, photoKey, serverImageUrl]);
 
     const [index, setIndex] = useState(0);
     const [url, setUrl] = useState<string>();
@@ -173,11 +176,12 @@ export const ArtistBackdrop = ({
     // Start from the first photo whenever the photo list changes (e.g. new artist)
     useEffect(() => setIndex(0), [images]);
 
+    // Count each photo's time from when it's actually on screen, not from when it was asked for
     useEffect(() => {
-        if (images.length < 2) return undefined;
-        const timer = setInterval(() => setIndex((value) => value + 1), ROTATE_INTERVAL_MS);
-        return () => clearInterval(timer);
-    }, [images]);
+        if (images.length < 2 || !url) return undefined;
+        const timer = setTimeout(() => setIndex((value) => value + 1), ROTATE_INTERVAL_MS);
+        return () => clearTimeout(timer);
+    }, [images, url]);
 
     // Only swap once the next photo has loaded, so it never fades into a blank frame
     useEffect(() => {
