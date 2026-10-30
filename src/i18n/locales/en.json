@@ -585,11 +585,38 @@
             "editMetadata": "Edit Metadata"
         },
         "fullscreenPlayer": {
+            "discography": {
+                "connect": "Add your Lidarr address and API key in the player settings (gear icon) to see missing albums and request them.",
+                "failed": "Failed, retry",
+                "group": {
+                    "compilation": "Remixes & compilations",
+                    "ep": "EPs",
+                    "library": "Also in your library",
+                    "live": "Live",
+                    "other": "Other",
+                    "single": "Singles",
+                    "soundtrack": "Soundtracks",
+                    "studio": "Studio albums"
+                },
+                "lidarrError": "Couldn't reach Lidarr. Check the address and API key in the player settings.",
+                "loading": "Loading discography…",
+                "missing": "Missing",
+                "notInLidarr": "{{artist}} isn't in Lidarr, so only albums in your library are shown.",
+                "playing": "Playing",
+                "request": "+ Lidarr",
+                "searching": "Searching…",
+                "summary": "{{owned}} of {{total}} releases in your library",
+                "tab": "Discography",
+                "wanted": "Wanted"
+            },
             "config": {
                 "coverArtSize": "Cover art size",
                 "dynamicBackground": "Dynamic background",
                 "dynamicImageBlur": "Image blur size",
                 "dynamicImageSource": "Background image source",
+                "fanartApiKey": "fanart.tv API key (for HD artist photos)",
+                "lidarrApiKey": "Lidarr API key",
+                "lidarrUrl": "Lidarr address",
                 "dynamicIsImage": "Enable background image",
                 "followCurrentLyric": "Follow current lyric",
                 "followCurrentLyric_description": "Automatically scroll to keep the active lyric line in view",

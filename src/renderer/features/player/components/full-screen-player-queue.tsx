@@ -8,7 +8,13 @@ import styles from './full-screen-player-queue.module.css';
 import { Lyrics } from '/@/renderer/features/lyrics/lyrics';
 import { PlayQueue } from '/@/renderer/features/now-playing/components/play-queue';
 import { FullScreenSimilarSongs } from '/@/renderer/features/player/components/full-screen-similar-songs';
-import { useListSettings, usePlaybackSettings, useSettingsStore } from '/@/renderer/store';
+import { LidarrDiscography } from '/@/renderer/features/player/components/lidarr-discography';
+import {
+    useIsArtistBackdropMode,
+    useListSettings,
+    usePlaybackSettings,
+    useSettingsStore,
+} from '/@/renderer/store';
 import {
     useFullScreenPlayerStore,
     useFullScreenPlayerStoreActions,
@@ -34,6 +40,7 @@ const isDesktopPanelOpen = (activeTab: string, webAudio: boolean) =>
     activeTab === 'queue' ||
     activeTab === 'related' ||
     activeTab === 'lyrics' ||
+    activeTab === 'discography' ||
     (activeTab === 'visualizer' && webAudio);
 
 const moduleContentVariants: Variants = {
@@ -96,6 +103,12 @@ const Controls = () => {
                 label: t('page.fullscreenPlayer.lyrics'),
                 onClick: () => toggleTab('lyrics'),
             },
+            {
+                active: activeTab === 'discography',
+                icon: 'itemAlbum',
+                label: t('page.fullscreenPlayer.discography.tab'),
+                onClick: () => toggleTab('discography'),
+            },
         ];
 
         if (webAudio) {
@@ -148,10 +161,12 @@ export const FullScreenPlayerQueue = () => {
     });
     const isPanelOpen = isDesktopPanelOpen(activeTab, webAudio);
     const isCollapsed = !isPanelOpen;
+    const isBackdropMode = useIsArtistBackdropMode();
 
     return (
         <div
             className={clsx(styles.gridContainer, 'full-screen-player-queue-container', {
+                [styles.gridContainerBackdrop]: isBackdropMode,
                 [styles.gridContainerCollapsed]: isCollapsed,
             })}
         >
@@ -192,6 +207,17 @@ export const FullScreenPlayerQueue = () => {
                         variants={moduleContentVariants}
                     >
                         <Lyrics fadeOutNoLyricsMessage={false} />
+                    </motion.div>
+                ) : activeTab === 'discography' ? (
+                    <motion.div
+                        animate="animate"
+                        className={styles.moduleContent}
+                        exit="exit"
+                        initial="initial"
+                        key="discography"
+                        variants={moduleContentVariants}
+                    >
+                        <LidarrDiscography />
                     </motion.div>
                 ) : activeTab === 'visualizer' && webAudio ? (
                     <motion.div

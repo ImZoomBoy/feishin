@@ -18,6 +18,7 @@ import { SegmentedControl } from '/@/shared/components/segmented-control/segment
 import { Select } from '/@/shared/components/select/select';
 import { Slider } from '/@/shared/components/slider/slider';
 import { Stack } from '/@/shared/components/stack/stack';
+import { TextInput } from '/@/shared/components/text-input/text-input';
 
 export const FullScreenPlayerSettingsForm = () => {
     const { t } = useTranslation();
@@ -27,6 +28,9 @@ export const FullScreenPlayerSettingsForm = () => {
         dynamicImageBlur,
         dynamicImageSource,
         dynamicIsImage,
+        fanartApiKey,
+        lidarrApiKey,
+        lidarrUrl,
         opacity,
         playerItemAlignment,
         titleDisplayType,
@@ -77,6 +81,45 @@ export const FullScreenPlayerSettingsForm = () => {
             id: 'dynamicImageSource',
             isHidden: !(dynamicBackground && dynamicIsImage),
             label: t('page.fullscreenPlayer.config.dynamicImageSource'),
+        },
+        {
+            component: (
+                <TextInput
+                    defaultValue={fanartApiKey ?? ''}
+                    onBlur={(e) => setStore({ fanartApiKey: e.currentTarget.value.trim() })}
+                    placeholder="fanart.tv/get-an-api-key"
+                    type="password"
+                    width="100%"
+                />
+            ),
+            id: 'fanartApiKey',
+            isHidden: !(dynamicBackground && dynamicIsImage && dynamicImageSource === 'artist'),
+            label: t('page.fullscreenPlayer.config.fanartApiKey'),
+        },
+        {
+            component: (
+                <TextInput
+                    defaultValue={lidarrUrl ?? ''}
+                    onBlur={(e) => setStore({ lidarrUrl: e.currentTarget.value.trim() })}
+                    placeholder="http://192.168.1.10:8686"
+                    width="100%"
+                />
+            ),
+            id: 'lidarrUrl',
+            label: t('page.fullscreenPlayer.config.lidarrUrl'),
+        },
+        {
+            component: (
+                <TextInput
+                    defaultValue={lidarrApiKey ?? ''}
+                    onBlur={(e) => setStore({ lidarrApiKey: e.currentTarget.value.trim() })}
+                    placeholder="Lidarr → Settings → General"
+                    type="password"
+                    width="100%"
+                />
+            ),
+            id: 'lidarrApiKey',
+            label: t('page.fullscreenPlayer.config.lidarrApiKey'),
         },
         {
             component: (

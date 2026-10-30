@@ -25,6 +25,9 @@ interface FullScreenPlayerState {
     dynamicImageSource?: FullScreenPlayerImageSource;
     dynamicIsImage?: boolean;
     expanded: boolean;
+    fanartApiKey?: string;
+    lidarrApiKey?: string;
+    lidarrUrl?: string;
     opacity: number;
     playerItemAlignment: FullScreenPlayerItemAlignment;
     titleDisplayType: FullScreenPlayerTitleDisplayType;
@@ -99,6 +102,14 @@ export const useFullScreenPlayerStoreActions = () =>
 
 export const useSetFullScreenPlayerStore = () =>
     useFullScreenPlayerStore((state) => state.actions.setStore);
+
+// The artist photo background takes over the page, so the cover moves out of the way
+export const useIsArtistBackdropMode = () =>
+    useFullScreenPlayerStore(
+        (state) =>
+            Boolean(state.dynamicBackground && state.dynamicIsImage) &&
+            state.dynamicImageSource === 'artist',
+    );
 
 export const useFullScreenPlayerOverlayState = () =>
     useFullScreenPlayerStore(

@@ -323,6 +323,7 @@ export const FullScreenPlayer = () => {
         activeTab === 'queue' ||
         activeTab === 'related' ||
         activeTab === 'lyrics' ||
+        activeTab === 'discography' ||
         activeTab === 'visualizer';
 
     const isRadioActive = useIsRadioActive();

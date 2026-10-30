@@ -78,6 +78,12 @@
     }
 }
 
+/* Artist photo mode: dark panel so the list stays readable over busy photos */
+.grid-container-backdrop {
+    background: rgb(10 10 12 / 80%);
+    border-radius: 12px;
+}
+
 .grid-container-collapsed {
     transform: translateX(100%);
 
